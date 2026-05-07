@@ -1,7 +1,16 @@
 'use client'
 
 import React, { useState, useMemo } from 'react'
-import { mockSubscriptions, mockPlans, type Plan, type PlanDuration, getDurationLabel, calculateDevicePrice, getPerDeviceCost } from '@/lib/mock-data'
+import { mockPlans, type Plan, type PlanDuration, getDurationLabel, calculateDevicePrice, getPerDeviceCost } from '@/lib/mock-data'
+import {
+  useSubscriptionStore,
+  findMatchingPlan,
+  getSubscriptionPrice,
+  calculateNewExpiry,
+  isWithin60Days,
+  getDaysBeforeVanish,
+  type Subscription,
+} from '@/lib/subscription-store'
 import { useAuthStore } from '@/lib/auth-store'
 import { useNavigationStore } from '@/lib/navigation-store'
 import { useCouponStore } from '@/lib/coupon-store'
@@ -45,22 +54,6 @@ import { toast } from 'sonner'
 import { AnimateIn } from '@/components/shared/animate-in'
 import type { Coupon } from '@/lib/mock-data'
 
-interface Subscription {
-  id: string
-  userId: string
-  userName: string
-  name: string
-  plan: string
-  status: 'active' | 'expired' | 'renewable'
-  startDate: string
-  expiryDate: string
-  price: number
-  bandwidthUsed: number
-  bandwidthLimit: number
-  deepLink: string
-  devices: number
-}
-
 function getStatusBadge(status: 'active' | 'expired' | 'renewable') {
   switch (status) {
     case 'active':
@@ -84,49 +77,15 @@ function getStatusBadge(status: 'active' | 'expired' | 'renewable') {
   }
 }
 
-// Check if a subscription is within 60-day renewable window
-function isWithin60Days(expiryDate: string): boolean {
-  const expiry = new Date(expiryDate)
-  const now = new Date()
-  const sixtyDaysAfter = new Date(expiry)
-  sixtyDaysAfter.setDate(sixtyDaysAfter.getDate() + 60)
-  return now <= sixtyDaysAfter
-}
-
-function getDaysLeft(expiryDate: string): number | null {
-  const expiry = new Date(expiryDate)
-  const now = new Date()
-  const sixtyDaysAfter = new Date(expiry)
-  sixtyDaysAfter.setDate(sixtyDaysAfter.getDate() + 60)
-  const diff = sixtyDaysAfter.getTime() - now.getTime()
-  if (diff <= 0) return null
-  return Math.ceil(diff / (1000 * 60 * 60 * 24))
-}
-
-// Find the matching plan for a subscription by name
-function findMatchingPlan(subName: string): Plan | null {
-  return mockPlans.find((p) => p.name === subName && p.isActive) ?? null
-}
-
-// Calculate the renewal price for a subscription (same plan, same devices)
-function getRenewalPrice(sub: Subscription): number {
-  const plan = findMatchingPlan(sub.name)
-  if (!plan) return sub.price // fallback to original price
-  return calculateDevicePrice(plan.basePrice, plan.devicePricing, sub.devices ?? 1)
-}
-
 export function SubscriptionsPage() {
   const { user, deductBalance } = useAuthStore()
   const navigate = useNavigationStore((s) => s.navigate)
   const couponStore = useCouponStore()
 
-  // Local subscription state — only expired/renewable that are within 60-day window
-  const [historySubs, setHistorySubs] = useState<Subscription[]>(() =>
-    (mockSubscriptions as Subscription[]).filter((s) => {
-      if (s.status === 'active') return false
-      return isWithin60Days(s.expiryDate)
-    })
-  )
+  const { subscriptions, renewSubscription } = useSubscriptionStore()
+
+  // Derived: expired/renewable subscriptions within 60-day window
+  const historySubs = subscriptions.filter((s) => s.status !== 'active' && isWithin60Days(s.expiryDate))
 
   // Renew flow state
   const [renewDialogOpen, setRenewDialogOpen] = useState(false)
@@ -141,12 +100,12 @@ export function SubscriptionsPage() {
   const balance = user?.balance ?? 0
 
   // Stats
-  const activeCount = (mockSubscriptions as Subscription[]).filter((s) => s.status === 'active').length
+  const activeCount = subscriptions.filter((s) => s.status === 'active').length
   const renewableCount = historySubs.filter((s) => s.status === 'renewable').length
-  const totalSpent = (mockSubscriptions as Subscription[]).reduce((sum, s) => sum + s.price, 0)
+  const totalSpent = subscriptions.reduce((sum, s) => sum + s.price, 0)
 
   // Renewal price calculation
-  const renewalPrice = renewingSub ? getRenewalPrice(renewingSub) : 0
+  const renewalPrice = renewingSub ? getSubscriptionPrice(renewingSub) : 0
   const matchingPlan = renewingSub ? findMatchingPlan(renewingSub.name) : null
 
   const finalPrice = Math.max(0, renewalPrice - couponDiscount)
@@ -201,18 +160,11 @@ export function SubscriptionsPage() {
 
     // Calculate new expiry: from TODAY + plan duration (since it's already expired)
     const now = new Date()
-    const newExpiry = new Date(now)
-    switch (matchingPlan.duration) {
-      case '3d': newExpiry.setDate(newExpiry.getDate() + 3); break
-      case '7d': newExpiry.setDate(newExpiry.getDate() + 7); break
-      case '15d': newExpiry.setDate(newExpiry.getDate() + 15); break
-      case '30d': newExpiry.setMonth(newExpiry.getMonth() + 1); break
-      case '6m': newExpiry.setMonth(newExpiry.getMonth() + 6); break
-      case '1y': newExpiry.setFullYear(newExpiry.getFullYear() + 1); break
-    }
+    const newExpiry = calculateNewExpiry(now, matchingPlan.duration)
+    const newExpiryStr = newExpiry.toISOString().split('T')[0]
 
-    // Remove from history (it's now active again)
-    setHistorySubs((prev) => prev.filter((s) => s.id !== renewingSub.id))
+    // Renew the same subscription (updates status to active, extends expiry, resets bandwidth)
+    renewSubscription(renewingSub.id, newExpiryStr)
 
     setRenewDialogOpen(false)
     setRenewingSub(null)
@@ -316,7 +268,7 @@ export function SubscriptionsPage() {
               </TableHeader>
               <TableBody>
                 {historySubs.map((sub) => {
-                  const daysLeft = getDaysLeft(sub.expiryDate)
+                  const daysLeft = getDaysBeforeVanish(sub.expiryDate)
                   const hasMatchingPlan = !!findMatchingPlan(sub.name)
                   return (
                     <TableRow key={sub.id}>
@@ -426,19 +378,7 @@ export function SubscriptionsPage() {
                   </div>
                   <div className="flex items-center gap-2 pt-1 text-xs text-muted-foreground">
                     <Clock className="size-3.5" />
-                    <span>New expiry will be: <strong className="text-foreground">{(() => {
-                      const now = new Date()
-                      const newExpiry = new Date(now)
-                      switch (matchingPlan.duration) {
-                        case '3d': newExpiry.setDate(newExpiry.getDate() + 3); break
-                        case '7d': newExpiry.setDate(newExpiry.getDate() + 7); break
-                        case '15d': newExpiry.setDate(newExpiry.getDate() + 15); break
-                        case '30d': newExpiry.setMonth(newExpiry.getMonth() + 1); break
-                        case '6m': newExpiry.setMonth(newExpiry.getMonth() + 6); break
-                        case '1y': newExpiry.setFullYear(newExpiry.getFullYear() + 1); break
-                      }
-                      return newExpiry.toLocaleDateString()
-                    })()}</strong> (from today)</span>
+                    <span>New expiry will be: <strong className="text-foreground">{calculateNewExpiry(new Date(), matchingPlan.duration).toLocaleDateString()}</strong> (from today)</span>
                   </div>
                 </CardContent>
               </Card>

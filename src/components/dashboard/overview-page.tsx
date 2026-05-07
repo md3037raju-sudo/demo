@@ -3,7 +3,6 @@
 import React, { useState, useMemo } from 'react'
 import { useAuthStore } from '@/lib/auth-store'
 import {
-  mockSubscriptions,
   mockActiveDevices,
   mockPlans,
   type Coupon,
@@ -14,6 +13,13 @@ import {
   getPerDeviceCost,
   getSavingsPercent,
 } from '@/lib/mock-data'
+import {
+  useSubscriptionStore,
+  findMatchingPlan,
+  getSubscriptionPrice,
+  calculateNewExpiry,
+  type Subscription,
+} from '@/lib/subscription-store'
 import { useCouponStore } from '@/lib/coupon-store'
 import { useNavigationStore } from '@/lib/navigation-store'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -64,50 +70,8 @@ import {
 import { toast } from 'sonner'
 import { AnimateIn } from '@/components/shared/animate-in'
 
-interface Subscription {
-  id: string
-  userId: string
-  userName: string
-  name: string
-  plan: string
-  status: 'active' | 'expired' | 'renewable'
-  startDate: string
-  expiryDate: string
-  price: number
-  bandwidthUsed: number
-  bandwidthLimit: number
-  deepLink: string
-  devices: number
-}
-
 // Duration tab order
 const DURATION_ORDER: PlanDuration[] = ['3d', '7d', '15d', '30d', '6m', '1y']
-
-// Find the matching plan for a subscription by name
-function findMatchingPlan(subName: string): Plan | null {
-  return mockPlans.find((p) => p.name === subName && p.isActive) ?? null
-}
-
-// Calculate the extend price for a subscription (same plan, same devices)
-function getExtendPrice(sub: Subscription): number {
-  const plan = findMatchingPlan(sub.name)
-  if (!plan) return sub.price // fallback to original price
-  return calculateDevicePrice(plan.basePrice, plan.devicePricing, sub.devices ?? 1)
-}
-
-// Calculate new expiry date when extending (from CURRENT expiry + duration)
-function getExtendedExpiry(currentExpiry: string, duration: PlanDuration): Date {
-  const expiry = new Date(currentExpiry)
-  switch (duration) {
-    case '3d': expiry.setDate(expiry.getDate() + 3); break
-    case '7d': expiry.setDate(expiry.getDate() + 7); break
-    case '15d': expiry.setDate(expiry.getDate() + 15); break
-    case '30d': expiry.setMonth(expiry.getMonth() + 1); break
-    case '6m': expiry.setMonth(expiry.getMonth() + 6); break
-    case '1y': expiry.setFullYear(expiry.getFullYear() + 1); break
-  }
-  return expiry
-}
 
 export function OverviewPage() {
   const { user, deductBalance } = useAuthStore()
@@ -120,7 +84,7 @@ export function OverviewPage() {
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null)
   const [selectedDevices, setSelectedDevices] = useState(1)
-  const [subscriptions, setSubscriptions] = useState<Subscription[]>(mockSubscriptions as Subscription[])
+  const { subscriptions, addSubscription, extendSubscription } = useSubscriptionStore()
 
   // Extend flow state
   const [extendDialogOpen, setExtendDialogOpen] = useState(false)
@@ -136,6 +100,7 @@ export function OverviewPage() {
   const activeSubsList = subscriptions.filter((s) => s.status === 'active')
   const activeSubscriptions = activeSubsList.length
   const activeDevicesCount = mockActiveDevices.length
+  const totalSpent = subscriptions.reduce((sum, s) => sum + s.price, 0)
   const balance = user?.balance ?? 0
   const referralCount = user?.totalReferrals ?? 0
 
@@ -161,11 +126,11 @@ export function OverviewPage() {
     setExtendDialogOpen(true)
   }
 
-  const extendPrice = extendingSub ? getExtendPrice(extendingSub) : 0
+  const extendPrice = extendingSub ? getSubscriptionPrice(extendingSub) : 0
   const extendPlan = extendingSub ? findMatchingPlan(extendingSub.name) : null
   const extendFinalPrice = Math.max(0, extendPrice - couponDiscount)
   const newExpiryDate = extendingSub && extendPlan
-    ? getExtendedExpiry(extendingSub.expiryDate, extendPlan.duration)
+    ? calculateNewExpiry(extendingSub.expiryDate, extendPlan.duration)
     : null
 
   const handleExtendApplyCoupon = () => {
@@ -208,14 +173,9 @@ export function OverviewPage() {
     }
 
     // Update the subscription's expiry date (extend it)
-    const newExpiry = getExtendedExpiry(extendingSub.expiryDate, extendPlan.duration)
-    setSubscriptions((prev) =>
-      prev.map((s) =>
-        s.id === extendingSub.id
-          ? { ...s, expiryDate: newExpiry.toISOString().split('T')[0], price: s.price + extendPrice }
-          : s
-      )
-    )
+    const newExpiry = calculateNewExpiry(extendingSub.expiryDate, extendPlan.duration)
+    const newExpiryDateStr = newExpiry.toISOString().split('T')[0]
+    extendSubscription(extendingSub.id, newExpiryDateStr, extendPrice)
 
     setExtendDialogOpen(false)
     setExtendingSub(null)
@@ -345,15 +305,7 @@ export function OverviewPage() {
 
     // Calculate expiry date based on duration
     const now = new Date()
-    const expiry = new Date(now)
-    switch (selectedPlan.duration) {
-      case '3d': expiry.setDate(expiry.getDate() + 3); break
-      case '7d': expiry.setDate(expiry.getDate() + 7); break
-      case '15d': expiry.setDate(expiry.getDate() + 15); break
-      case '30d': expiry.setMonth(expiry.getMonth() + 1); break
-      case '6m': expiry.setMonth(expiry.getMonth() + 6); break
-      case '1y': expiry.setFullYear(expiry.getFullYear() + 1); break
-    }
+    const expiry = calculateNewExpiry(now, selectedPlan.duration)
 
     // Parse bandwidth limit
     const bwLimit = selectedPlan.bandwidthType === 'unlimited'
@@ -376,7 +328,7 @@ export function OverviewPage() {
       devices: selectedDevices,
     }
 
-    setSubscriptions((prev) => [newSub, ...prev])
+    addSubscription(newSub)
 
     setConfirmDialogOpen(false)
     setSelectedPlanId(null)
@@ -404,25 +356,25 @@ export function OverviewPage() {
 
   const stats = [
     {
-      title: 'Active Subscriptions',
+      title: 'Total Spent',
+      value: `৳${totalSpent.toFixed(2)}`,
+      icon: Wallet,
+      color: 'text-emerald-400',
+      bg: 'bg-emerald-500/10',
+    },
+    {
+      title: 'Active',
       value: activeSubscriptions,
       icon: CreditCard,
       color: 'text-emerald-400',
       bg: 'bg-emerald-500/10',
     },
     {
-      title: 'Active Devices',
-      value: activeDevicesCount,
+      title: 'Balance',
+      value: `৳${balance.toFixed(2)}`,
       icon: Smartphone,
       color: 'text-teal-400',
       bg: 'bg-teal-500/10',
-    },
-    {
-      title: 'Balance',
-      value: `৳${balance.toFixed(2)}`,
-      icon: Wallet,
-      color: 'text-emerald-400',
-      bg: 'bg-emerald-500/10',
     },
     {
       title: 'Referrals',

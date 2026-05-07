@@ -22,7 +22,6 @@ import {
   SheetClose,
 } from '@/components/ui/sheet'
 import {
-  Shield,
   Lock,
   Smartphone,
   Activity,
@@ -37,7 +36,7 @@ import {
 } from 'lucide-react'
 import { ThemeToggle } from '@/components/shared/theme-toggle'
 import { AnimateIn } from '@/components/shared/animate-in'
-import { CoreXLogo } from '@/components/shared/corex-logo'
+import { CoreXLogo, CoreXLogoIcon } from '@/components/shared/corex-logo'
 
 export function LandingPage() {
   const navigate = useNavigationStore((s) => s.navigate)
@@ -66,9 +65,9 @@ export function LandingPage() {
           {/* Logo */}
           <button
             onClick={() => navigate('landing')}
-            className="flex items-center gap-2 transition-opacity hover:opacity-80"
+            className="flex items-center gap-2.5 transition-opacity hover:opacity-80"
           >
-            <CoreXLogo height={32} />
+            <CoreXLogo height={28} />
           </button>
 
           {/* Desktop Navigation */}
@@ -166,12 +165,12 @@ export function LandingPage() {
 
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-20 sm:py-28 lg:py-36">
           <div className="flex flex-col items-center text-center">
-            {/* Decorative Shield */}
+            {/* Logo above badge */}
             <AnimateIn type="scale-in" className="relative mb-8">
               <div className="relative flex items-center justify-center">
-                <div className="absolute size-32 rounded-full bg-primary/10 animate-pulse" />
-                <div className="absolute size-24 rounded-full bg-primary/15" />
-                <Shield className="relative size-16 text-primary drop-shadow-[0_0_24px_rgba(16,185,129,0.4)]" />
+                <div className="absolute size-36 rounded-full bg-primary/10 animate-pulse" />
+                <div className="absolute size-28 rounded-full bg-primary/15" />
+                <CoreXLogoIcon size={64} className="relative drop-shadow-[0_0_24px_rgba(16,185,129,0.4)]" />
               </div>
               {/* Orbiting dots */}
               <div className="absolute inset-0 animate-[spin_12s_linear_infinite]">

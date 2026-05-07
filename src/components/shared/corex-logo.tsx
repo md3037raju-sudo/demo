@@ -26,8 +26,8 @@ export function CoreXLogo({
     ? '/corex-logo-dark.png'
     : '/corex-logo-light.png'
 
-  // Calculate width to maintain aspect ratio (assuming ~4:1 aspect for horizontal logos)
-  const width = height * 4
+  // Logos are square (1:1 aspect ratio)
+  const width = height
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>
@@ -40,7 +40,7 @@ export function CoreXLogo({
         priority
       />
       {showText && (
-        <span className="text-lg font-bold tracking-tight">
+        <span className="font-bold tracking-tight" style={{ fontSize: `${Math.max(14, height * 0.65)}px` }}>
           Core<span className="text-primary">X</span>
         </span>
       )}
@@ -53,7 +53,7 @@ export function CoreXLogo({
   )
 }
 
-/** Compact logo icon only (no text) — for small spaces like sidebar top bar */
+/** Compact logo icon only (no text) — for small spaces like hero section or sidebar top bar */
 export function CoreXLogoIcon({ size = 32, className = '' }: { size?: number; className?: string }) {
   const { resolvedTheme } = useTheme()
 

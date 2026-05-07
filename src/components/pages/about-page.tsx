@@ -339,7 +339,7 @@ export function AboutPage() {
       <footer className="border-t border-border/40 bg-background mt-auto">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 py-8">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <CoreXLogo height={24} />
+            <CoreXLogo height={22} />
             <div className="flex items-center gap-6">
               {['Privacy', 'Terms', 'Security', 'Contact'].map((link) => (
                 <button
