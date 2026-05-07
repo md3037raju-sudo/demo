@@ -1,10 +1,13 @@
 'use client'
 
 import { useState } from 'react'
-import { Shield, ArrowLeft, KeyRound, UserCog, User } from 'lucide-react'
+import { Shield, ArrowLeft, KeyRound, UserCog, User, Lock, ArrowRight } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
+import { Label } from '@/components/ui/label'
+import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator } from '@/components/ui/input-otp'
 import {
   Dialog,
   DialogContent,
@@ -15,6 +18,7 @@ import {
 } from '@/components/ui/dialog'
 import { useNavigationStore } from '@/lib/navigation-store'
 import { useAuthStore } from '@/lib/auth-store'
+import { use2FAStore } from '@/lib/2fa-store'
 
 function GoogleIcon() {
   return (
@@ -52,8 +56,14 @@ export function LoginPage() {
   const login = useAuthStore((s) => s.login)
   const loginAsAdmin = useAuthStore((s) => s.loginAsAdmin)
   const loginAsUser = useAuthStore((s) => s.loginAsUser)
+  const { isEnabled: is2FAEnabled, isVerified: is2FAVerified, verifyCode: verify2FACode } = use2FAStore()
 
   const [adminDialogOpen, setAdminDialogOpen] = useState(false)
+  const [twoFADialogOpen, setTwoFADialogOpen] = useState(false)
+  const [twoFACode, setTwoFACode] = useState('')
+  const [twoFAError, setTwoFAError] = useState(false)
+  const [useBackupCode, setUseBackupCode] = useState(false)
+  const [backupCodeInput, setBackupCodeInput] = useState('')
 
   const handleLogin = (provider: 'google' | 'telegram') => {
     const role = login(provider)
@@ -71,13 +81,49 @@ export function LoginPage() {
 
   const handleLoginAsAdmin = () => {
     setAdminDialogOpen(false)
-    navigate('admin')
+    // Check if 2FA is enabled and not yet verified
+    if (is2FAEnabled && !is2FAVerified) {
+      setTwoFADialogOpen(true)
+      setTwoFACode('')
+      setTwoFAError(false)
+      setUseBackupCode(false)
+      setBackupCodeInput('')
+    } else {
+      navigate('admin')
+    }
   }
 
   const handleLoginAsUser = () => {
     loginAsUser()
     setAdminDialogOpen(false)
     navigate('dashboard')
+  }
+
+  const handle2FAVerify = () => {
+    if (!useBackupCode) {
+      if (/^\d{6}$/.test(twoFACode) && verify2FACode(twoFACode)) {
+        setTwoFADialogOpen(false)
+        navigate('admin')
+      } else {
+        setTwoFAError(true)
+      }
+    } else {
+      if (backupCodeInput.length >= 8 && verify2FACode(backupCodeInput)) {
+        setTwoFADialogOpen(false)
+        navigate('admin')
+      } else {
+        setTwoFAError(true)
+      }
+    }
+  }
+
+  const handle2FACancel = () => {
+    setTwoFADialogOpen(false)
+    setTwoFACode('')
+    setTwoFAError(false)
+    setUseBackupCode(false)
+    setBackupCodeInput('')
+    setAdminDialogOpen(true)
   }
 
   return (
@@ -230,6 +276,97 @@ export function LoginPage() {
               }}
             >
               Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 2FA Verification Dialog */}
+      <Dialog open={twoFADialogOpen} onOpenChange={(open) => { if (!open) handle2FACancel() }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <div className="flex items-center justify-center size-8 rounded-lg bg-emerald-500/10">
+                <Lock className="size-4 text-emerald-400" />
+              </div>
+              Two-Factor Authentication
+            </DialogTitle>
+            <DialogDescription>
+              {!useBackupCode
+                ? 'Enter the 6-digit code from your authenticator app'
+                : 'Enter one of your backup codes'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {!useBackupCode ? (
+              <div className="flex flex-col items-center gap-4">
+                <Label className="text-sm text-muted-foreground">Authentication Code</Label>
+                <InputOTP
+                  maxLength={6}
+                  value={twoFACode}
+                  onChange={(value) => { setTwoFACode(value); setTwoFAError(false); }}
+                >
+                  <InputOTPGroup>
+                    <InputOTPSlot index={0} />
+                    <InputOTPSlot index={1} />
+                    <InputOTPSlot index={2} />
+                  </InputOTPGroup>
+                  <InputOTPSeparator />
+                  <InputOTPGroup>
+                    <InputOTPSlot index={3} />
+                    <InputOTPSlot index={4} />
+                    <InputOTPSlot index={5} />
+                  </InputOTPGroup>
+                </InputOTP>
+                {twoFAError && (
+                  <p className="text-sm text-red-400">Invalid code. Please try again.</p>
+                )}
+                <button
+                  className="text-xs text-primary hover:underline"
+                  onClick={() => {
+                    setUseBackupCode(true)
+                    setTwoFAError(false)
+                    setBackupCodeInput('')
+                  }}
+                >
+                  Use Backup Code
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-4">
+                <Label className="text-sm text-muted-foreground">Backup Code</Label>
+                <Input
+                  value={backupCodeInput}
+                  onChange={(e) => { setBackupCodeInput(e.target.value.toUpperCase()); setTwoFAError(false); }}
+                  placeholder="Enter 8-character backup code"
+                  className="text-center font-mono tracking-widest text-lg h-12 max-w-xs"
+                  maxLength={8}
+                />
+                {twoFAError && (
+                  <p className="text-sm text-red-400">Invalid backup code. Please try again.</p>
+                )}
+                <button
+                  className="text-xs text-primary hover:underline"
+                  onClick={() => {
+                    setUseBackupCode(false)
+                    setTwoFAError(false)
+                    setTwoFACode('')
+                  }}
+                >
+                  Use Authenticator Code
+                </button>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" onClick={handle2FACancel}>
+              Cancel
+            </Button>
+            <Button onClick={handle2FAVerify} className="gap-1.5">
+              <ArrowRight className="size-4" />
+              Verify
             </Button>
           </DialogFooter>
         </DialogContent>

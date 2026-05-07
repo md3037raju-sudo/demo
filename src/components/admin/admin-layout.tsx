@@ -41,6 +41,8 @@ import {
   Shield,
   Settings,
   ArrowLeft,
+  Ticket,
+  ShieldCheck,
 } from 'lucide-react'
 import { AdminDashboard } from './admin-dashboard'
 import { AdminUsers } from './admin-users'
@@ -55,6 +57,8 @@ import { AdminDbInitPage as AdminDbInit } from './admin-db-init'
 import { AdminBroadcastPage as AdminBroadcast } from './admin-broadcast'
 import { AdminTicketsPage as AdminTickets } from './admin-tickets'
 import { AdminCmsPage as AdminCMS } from './admin-cms'
+import { AdminCoupons } from './admin-coupons'
+import { use2FAStore } from '@/lib/2fa-store'
 
 interface NavItem {
   label: string
@@ -78,6 +82,7 @@ const mainNavItems: NavItem[] = [
 const secondaryNavItems: NavItem[] = [
   { label: 'Broadcast', icon: Megaphone, page: 'admin/broadcast' },
   { label: 'Tickets', icon: MessageSquare, page: 'admin/tickets' },
+  { label: 'Coupons', icon: Ticket, page: 'admin/coupons' },
   { label: 'CMS', icon: FileEdit, page: 'admin/cms' },
 ]
 
@@ -109,6 +114,8 @@ function getPageTitle(page: string): string {
       return 'Support Tickets'
     case 'admin/cms':
       return 'CMS Management'
+    case 'admin/coupons':
+      return 'Coupon Management'
     default:
       return 'Admin Panel'
   }
@@ -142,9 +149,31 @@ function renderAdminPage(page: string) {
       return <AdminTickets />
     case 'admin/cms':
       return <AdminCMS />
+    case 'admin/coupons':
+      return <AdminCoupons />
     default:
       return <AdminDashboard />
   }
+}
+
+function TwoFAShieldIndicator() {
+  const { isEnabled, isVerified } = use2FAStore()
+
+  if (isEnabled && isVerified) {
+    return (
+      <div className="flex items-center gap-1 rounded-md px-2 py-1 bg-emerald-500/15 border border-emerald-500/30">
+        <ShieldCheck className="size-3.5 text-emerald-400" />
+        <span className="text-[10px] font-medium text-emerald-400">2FA</span>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex items-center gap-1 rounded-md px-2 py-1 bg-red-500/15 border border-red-500/30">
+      <Shield className="size-3.5 text-red-400" />
+      <span className="text-[10px] font-medium text-red-400">2FA</span>
+    </div>
+  )
 }
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
@@ -335,6 +364,7 @@ export function AdminLayout() {
           <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-[10px]">Admin</Badge>
 
           <div className="ml-auto flex items-center gap-2">
+            <TwoFAShieldIndicator />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative size-9 rounded-full">

@@ -2,11 +2,12 @@
 
 import React, { useState } from 'react'
 import { useAuthStore } from '@/lib/auth-store'
-import { mockSubscriptions, mockActiveDevices, mockPlans } from '@/lib/mock-data'
+import { mockSubscriptions, mockActiveDevices, mockPlans, mockCoupons, type Coupon } from '@/lib/mock-data'
 import { useNavigationStore } from '@/lib/navigation-store'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import {
   Table,
@@ -37,6 +38,8 @@ import {
   Monitor,
   AlertCircle,
   ArrowRight,
+  Tag,
+  X,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -90,6 +93,12 @@ export function OverviewPage() {
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null)
   const [subscriptions, setSubscriptions] = useState<Subscription[]>(mockSubscriptions)
 
+  // Coupon state
+  const [couponInput, setCouponInput] = useState('')
+  const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null)
+  const [couponError, setCouponError] = useState('')
+  const [couponDiscount, setCouponDiscount] = useState(0)
+
   const activeSubscriptions = subscriptions.filter((s) => s.status === 'active').length
   const activeDevicesCount = mockActiveDevices.length
   const balance = user?.balance ?? 0
@@ -113,19 +122,114 @@ export function OverviewPage() {
     setSelectedPlanId(planId)
     setPurchaseDialogOpen(false)
     setConfirmDialogOpen(true)
+    // Reset coupon state when new plan selected
+    setCouponInput('')
+    setAppliedCoupon(null)
+    setCouponError('')
+    setCouponDiscount(0)
   }
+
+  const handleApplyCoupon = () => {
+    if (!couponInput.trim()) {
+      setCouponError('Please enter a coupon code')
+      return
+    }
+
+    if (!selectedPlan) return
+
+    const code = couponInput.trim().toUpperCase()
+    const coupon = mockCoupons.find((c) => c.code === code)
+
+    if (!coupon) {
+      setCouponError('Invalid coupon code')
+      setAppliedCoupon(null)
+      setCouponDiscount(0)
+      return
+    }
+
+    if (!coupon.isActive) {
+      setCouponError('This coupon is no longer active')
+      setAppliedCoupon(null)
+      setCouponDiscount(0)
+      return
+    }
+
+    if (new Date(coupon.expiresAt) < new Date()) {
+      setCouponError('This coupon has expired')
+      setAppliedCoupon(null)
+      setCouponDiscount(0)
+      return
+    }
+
+    if (coupon.currentClaims >= coupon.maxClaims) {
+      setCouponError('This coupon has reached its maximum claims')
+      setAppliedCoupon(null)
+      setCouponDiscount(0)
+      return
+    }
+
+    // Check if user already claimed
+    const userId = user?.id ?? 'usr_cx_001'
+    if (coupon.claimedBy.some((c) => c.userId === userId)) {
+      setCouponError('You have already used this coupon')
+      setAppliedCoupon(null)
+      setCouponDiscount(0)
+      return
+    }
+
+    // Check applicable plans
+    if (coupon.applicablePlans.length > 0 && !coupon.applicablePlans.includes(selectedPlan.id)) {
+      setCouponError('This coupon is not applicable to the selected plan')
+      setAppliedCoupon(null)
+      setCouponDiscount(0)
+      return
+    }
+
+    // Check min purchase
+    if (selectedPlan.price < coupon.minPurchase) {
+      setCouponError(`Minimum purchase of $${coupon.minPurchase.toFixed(2)} required`)
+      setAppliedCoupon(null)
+      setCouponDiscount(0)
+      return
+    }
+
+    // Calculate discount
+    let discount = 0
+    if (coupon.type === 'percentage') {
+      discount = selectedPlan.price * (coupon.value / 100)
+      if (coupon.maxDiscount > 0) {
+        discount = Math.min(discount, coupon.maxDiscount)
+      }
+    } else {
+      discount = Math.min(coupon.value, selectedPlan.price)
+    }
+
+    setAppliedCoupon(coupon)
+    setCouponDiscount(discount)
+    setCouponError('')
+    toast.success('Coupon applied!', {
+      description: `You save $${discount.toFixed(2)} on this purchase.`,
+    })
+  }
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null)
+    setCouponInput('')
+    setCouponDiscount(0)
+    setCouponError('')
+  }
+
+  const finalPrice = selectedPlan ? Math.max(0, selectedPlan.price - couponDiscount) : 0
 
   const handleConfirmPurchase = () => {
     if (!selectedPlan) return
 
-    const price = selectedPlan.price
-    if (balance < price) {
-      // Not enough balance — dialog stays open, user sees the message
+    if (balance < finalPrice) {
       return
     }
 
     // Deduct balance
-    deductBalance(price)
+    deductBalance(finalPrice)
 
     // Create new subscription
     const now = new Date()
@@ -155,15 +259,24 @@ export function OverviewPage() {
 
     setConfirmDialogOpen(false)
     setSelectedPlanId(null)
+    setAppliedCoupon(null)
+    setCouponInput('')
+    setCouponDiscount(0)
+    setCouponError('')
 
+    const discountMsg = couponDiscount > 0 ? ` $${couponDiscount.toFixed(2)} coupon discount applied.` : ''
     toast.success('Subscription purchased!', {
-      description: `${selectedPlan.name} (${selectedPlan.period}) has been activated. $${price.toFixed(2)} deducted from your balance.`,
+      description: `${selectedPlan.name} (${selectedPlan.period}) has been activated. $${finalPrice.toFixed(2)} deducted from your balance.${discountMsg}`,
     })
   }
 
   const handleCancelPurchase = () => {
     setConfirmDialogOpen(false)
     setSelectedPlanId(null)
+    setAppliedCoupon(null)
+    setCouponInput('')
+    setCouponDiscount(0)
+    setCouponError('')
   }
 
   const stats = [
@@ -414,13 +527,82 @@ export function OverviewPage() {
                     <div className="text-muted-foreground">Max Devices</div>
                     <div className="text-right font-medium">{selectedPlan.maxDevices}</div>
                     <div className="text-muted-foreground">Price</div>
-                    <div className="text-right font-bold text-lg">${selectedPlan.price.toFixed(2)}</div>
+                    <div className="text-right font-bold text-lg">
+                      {couponDiscount > 0 ? (
+                        <div className="space-y-1">
+                          <span className="line-through text-muted-foreground text-sm">${selectedPlan.price.toFixed(2)}</span>
+                          <div className="text-emerald-400">${finalPrice.toFixed(2)}</div>
+                        </div>
+                      ) : (
+                        `$${selectedPlan.price.toFixed(2)}`
+                      )}
+                    </div>
                   </div>
                 </CardContent>
               </Card>
 
+              {/* Coupon Section */}
+              <Card className="border-border/50">
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Tag className="size-4 text-primary" />
+                    <span className="font-medium text-sm">Have a coupon code?</span>
+                  </div>
+
+                  {appliedCoupon ? (
+                    <div className="flex items-center justify-between rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2">
+                      <div className="flex items-center gap-2">
+                        <Tag className="size-4 text-emerald-400" />
+                        <div>
+                          <code className="font-mono text-sm font-bold text-emerald-400">{appliedCoupon.code}</code>
+                          <p className="text-xs text-emerald-300">Coupon applied! You save ${couponDiscount.toFixed(2)}</p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-7 text-muted-foreground hover:text-red-400"
+                        onClick={handleRemoveCoupon}
+                      >
+                        <X className="size-3.5" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Enter coupon code"
+                          value={couponInput}
+                          onChange={(e) => { setCouponInput(e.target.value.toUpperCase()); setCouponError(''); }}
+                          className="font-mono"
+                        />
+                        <Button
+                          variant="outline"
+                          className="shrink-0 gap-1.5"
+                          onClick={handleApplyCoupon}
+                          disabled={!couponInput.trim()}
+                        >
+                          <Tag className="size-3.5" />
+                          Apply
+                        </Button>
+                      </div>
+                      {couponError && (
+                        <p className="text-xs text-red-400">{couponError}</p>
+                      )}
+                    </div>
+                  )}
+
+                  {couponDiscount > 0 && (
+                    <div className="flex items-center justify-between text-sm pt-1">
+                      <span className="text-muted-foreground">Coupon Discount</span>
+                      <span className="font-semibold text-emerald-400">-${couponDiscount.toFixed(2)}</span>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
               {/* Balance Check */}
-              <Card className={`border-border/50 ${balance < selectedPlan.price ? 'border-red-500/30 bg-red-500/5' : 'border-emerald-500/30 bg-emerald-500/5'}`}>
+              <Card className={`border-border/50 ${balance < finalPrice ? 'border-red-500/30 bg-red-500/5' : 'border-emerald-500/30 bg-emerald-500/5'}`}>
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Current Balance</span>
@@ -428,19 +610,30 @@ export function OverviewPage() {
                   </div>
                   <Separator className="my-2" />
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">After Purchase</span>
-                    <span className={`font-semibold ${balance < selectedPlan.price ? 'text-red-400' : 'text-emerald-400'}`}>
-                      ${(balance - selectedPlan.price).toFixed(2)}
+                    <span className="text-muted-foreground">
+                      {couponDiscount > 0 ? 'After Purchase (with discount)' : 'After Purchase'}
+                    </span>
+                    <span className={`font-semibold ${balance < finalPrice ? 'text-red-400' : 'text-emerald-400'}`}>
+                      ${(balance - finalPrice).toFixed(2)}
                     </span>
                   </div>
+                  {couponDiscount > 0 && (
+                    <>
+                      <Separator className="my-2" />
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">You Save</span>
+                        <span className="font-semibold text-emerald-400">${couponDiscount.toFixed(2)}</span>
+                      </div>
+                    </>
+                  )}
 
-                  {balance < selectedPlan.price && (
+                  {balance < finalPrice && (
                     <div className="mt-3 flex items-start gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
                       <AlertCircle className="size-4 text-red-400 shrink-0 mt-0.5" />
                       <div>
                         <p className="text-sm font-medium text-red-400">Insufficient Balance</p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          You need ${(selectedPlan.price - balance).toFixed(2)} more. Add funds to your balance to complete this purchase.
+                          You need ${(finalPrice - balance).toFixed(2)} more. Add funds to your balance to complete this purchase.
                         </p>
                         <Button
                           variant="outline"
@@ -467,7 +660,7 @@ export function OverviewPage() {
             <Button variant="outline" onClick={handleCancelPurchase}>
               Cancel
             </Button>
-            {selectedPlan && balance >= selectedPlan.price && (
+            {selectedPlan && balance >= finalPrice && (
               <Button className="gap-1.5" onClick={handleConfirmPurchase}>
                 <Check className="size-4" />
                 Confirm Purchase

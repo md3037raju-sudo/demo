@@ -305,3 +305,81 @@ export const mockTickets = [
   { id: 'tk_003', userId: 'usr_cx_005', userName: 'James Wilson', subject: 'Payment not reflected in balance', status: 'open' as const, priority: 'high' as const, createdAt: '2025-02-10', lastUpdate: '2025-02-10', messages: 2 },
   { id: 'tk_004', userId: 'usr_cx_002', userName: 'Sarah Chen', subject: 'Feature request: Dark mode in app', status: 'closed' as const, priority: 'low' as const, createdAt: '2025-01-20', lastUpdate: '2025-02-01', messages: 4 },
 ]
+
+// Coupon system
+export interface Coupon {
+  id: string
+  code: string
+  description: string
+  type: 'percentage' | 'fixed'
+  value: number
+  minPurchase: number
+  maxDiscount: number
+  maxClaims: number
+  currentClaims: number
+  applicablePlans: string[] // empty = all plans
+  expiresAt: string
+  createdAt: string
+  isActive: boolean
+  claimedBy: { userId: string; userName: string; claimedAt: string; discount: number }[]
+}
+
+export const mockCoupons: Coupon[] = [
+  {
+    id: 'coup_001',
+    code: 'LAUNCH20',
+    description: '20% off for launch celebration',
+    type: 'percentage',
+    value: 20,
+    minPurchase: 0,
+    maxDiscount: 50,
+    maxClaims: 100,
+    currentClaims: 34,
+    applicablePlans: [],
+    expiresAt: '2025-03-31',
+    createdAt: '2025-01-01',
+    isActive: true,
+    claimedBy: [
+      { userId: 'usr_cx_001', userName: 'Alex Morgan', claimedAt: '2025-01-15', discount: 5.998 },
+      { userId: 'usr_cx_002', userName: 'Sarah Chen', claimedAt: '2025-01-20', discount: 59.998 },
+      { userId: 'usr_cx_005', userName: 'James Wilson', claimedAt: '2025-02-01', discount: 5.998 },
+    ],
+  },
+  {
+    id: 'coup_002',
+    code: 'BDAY5',
+    description: '$5 flat discount on any plan',
+    type: 'fixed',
+    value: 5,
+    minPurchase: 10,
+    maxDiscount: 5,
+    maxClaims: 50,
+    currentClaims: 12,
+    applicablePlans: ['plan_002', 'plan_003'],
+    expiresAt: '2025-06-30',
+    createdAt: '2025-02-01',
+    isActive: true,
+    claimedBy: [
+      { userId: 'usr_cx_006', userName: 'Lisa Anderson', claimedAt: '2025-02-05', discount: 5.00 },
+    ],
+  },
+  {
+    id: 'coup_003',
+    code: 'VIP50',
+    description: '50% off for VIP users - limited',
+    type: 'percentage',
+    value: 50,
+    minPurchase: 29.99,
+    maxDiscount: 150,
+    maxClaims: 10,
+    currentClaims: 10,
+    applicablePlans: [],
+    expiresAt: '2025-02-28',
+    createdAt: '2025-01-15',
+    isActive: false,
+    claimedBy: [
+      { userId: 'usr_cx_001', userName: 'Alex Morgan', claimedAt: '2025-01-16', discount: 14.995 },
+      { userId: 'usr_cx_002', userName: 'Sarah Chen', claimedAt: '2025-01-17', discount: 149.995 },
+    ],
+  },
+]

@@ -36,6 +36,7 @@ import {
   XCircle,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { Admin2faSettings } from './admin-2fa-settings'
 
 interface Alert {
   id: string
@@ -599,6 +600,9 @@ export function AdminRules() {
           </Button>
         </CardContent>
       </Card>
+
+      {/* 5. Two-Factor Authentication */}
+      <Admin2faSettings />
     </div>
   )
 }

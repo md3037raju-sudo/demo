@@ -95,3 +95,24 @@
 - **Edit Balance** dialog enhanced: Now shows Current Balance and Previous Balance side-by-side, New Balance input, and Reason for Adjustment textarea
 
 ## Status: All lint passing, dev server running on port 3000
+
+## Task g1: Two-Factor Authentication for Admin ✅
+
+### New Files
+- **2fa-store.ts**: Zustand store for 2FA state — `isEnabled`, `secret`, `isVerified`, `backupCodes`; mock `verifyCode()` accepts any 6-digit code or backup code; `generateSecret()` returns "JBSWY3DPEHPK3PXP"; `generateBackupCodes()` generates 8 random 8-char alphanumeric codes; `regenerateBackupCodes()` replaces existing codes
+- **admin-2fa-settings.tsx**: Full 2FA setup/management component — enable flow (QR code visualization + secret key → verify with OTP → show backup codes with Download/Copy); enabled state shows green badge + "Regenerate Backup Codes" / "Disable 2FA" buttons (both require current OTP confirmation via AlertDialog); MockQRCode component renders a styled grid pattern as placeholder
+
+### Modified Files
+- **login-page.tsx**: After admin clicks "Login as Admin", checks if 2FA is enabled AND not verified → shows 2FA Verification Dialog with InputOTP (6-digit) or backup code input (8-char); on success navigates to admin and marks 2FA verified; on cancel returns to admin choice dialog; "Login as User" never requires 2FA
+- **admin-layout.tsx**: Added `TwoFAShieldIndicator` component in top bar — green ShieldCheck badge when 2FA enabled+verified, red Shield badge when disabled; added `Ticket` + `ShieldCheck` lucide imports; added "Coupons" nav item with Ticket icon to secondary nav; added `admin/coupons` route to `renderAdminPage` and `getPageTitle`; imported `AdminCoupons` and `use2FAStore`
+- **admin-rules.tsx**: Added `<Admin2faSettings />` at bottom as Security section; imported component
+
+## Task g2: Coupon Code System ✅
+
+### New Files
+- **admin-coupons.tsx**: Full coupon management page — stats row (Total/Active Coupons, Total Claims, Total Discount Given); searchable coupon table with columns: Code (monospace), Description, Type (badge: %=purple, fixed=green), Value, Min Purchase, Claims progress bar, Expires, Status (Active/Inactive/Expired); row actions: Edit, View Claims, Toggle Active, Delete; bulk select with checkboxes + "Delete Selected" + "Deactivate Selected" with AlertDialog; Create/Edit dialog with code (auto-generate button), description, type select, value, min purchase, max discount (percentage only), max claims, applicable plans (checkboxes: All Plans / specific), expiry date, active switch; View Claims dialog shows claimedBy table with User/Claimed At/Discount Amount + total summary + Export CSV; auto-generate creates codes like "COREX-A7B3X9"
+
+### Modified Files
+- **overview-page.tsx**: Added coupon support to Confirm Purchase dialog — "Have a coupon code?" section with input + Apply button; validates against mockCoupons (active, not expired, claims < max, user not already claimed, plan applicable, meets min purchase); valid coupon shows green "Coupon applied!" badge with savings; invalid shows red error; calculates percentage discount (capped at maxDiscount) or fixed discount (capped at price); shows original price crossed out + discounted price + savings amount; deducted amount from balance uses discounted price; coupon can be removed with X button
+
+## Status: All lint passing, dev server running on port 3000
