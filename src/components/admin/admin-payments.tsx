@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { mockAdminPayments } from '@/lib/mock-data'
+import { usePaymentStore, type PaymentMethod, type BalanceRequest, type RequestStatus } from '@/lib/payment-store'
 import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -42,13 +42,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
   Textarea,
 } from '@/components/ui/textarea'
 import {
@@ -61,23 +54,10 @@ import {
   Send,
   DollarSign,
   Clock,
+  Bell,
 } from 'lucide-react'
 
-type PaymentStatus = 'pending' | 'approved' | 'rejected'
-
-interface Payment {
-  id: string
-  userId: string
-  userName: string
-  amount: number
-  method: string
-  trxId: string
-  submittedAt: string
-  status: PaymentStatus
-  notes: string
-}
-
-function PaymentStatusBadge({ status }: { status: PaymentStatus }) {
+function PaymentStatusBadge({ status }: { status: RequestStatus }) {
   switch (status) {
     case 'pending':
       return <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 hover:bg-amber-500/20">Pending</Badge>
@@ -88,21 +68,27 @@ function PaymentStatusBadge({ status }: { status: PaymentStatus }) {
   }
 }
 
+function MethodBadge({ method }: { method: PaymentMethod }) {
+  if (method === 'bkash') {
+    return <Badge className="bg-[#E2136E]/20 text-[#E2136E] border-[#E2136E]/30 hover:bg-[#E2136E]/30">bKash</Badge>
+  }
+  return <Badge className="bg-[#F6921E]/20 text-[#F6921E] border-[#F6921E]/30 hover:bg-[#F6921E]/30">Nagad</Badge>
+}
+
 export function AdminPayments() {
-  const [payments, setPayments] = useState<Payment[]>(
-    mockAdminPayments as unknown as Payment[]
-  )
+  const { balanceRequests, approveRequest, rejectRequest, bulkApprove, bulkReject } = usePaymentStore()
+
   const [activeTab, setActiveTab] = useState('pending')
   const [searchQuery, setSearchQuery] = useState('')
 
   // View details dialog
-  const [viewPayment, setViewPayment] = useState<Payment | null>(null)
+  const [viewPayment, setViewPayment] = useState<BalanceRequest | null>(null)
   const [viewOpen, setViewOpen] = useState(false)
 
   // Approve/reject single
-  const [approvePayment, setApprovePayment] = useState<Payment | null>(null)
+  const [approvePayment, setApprovePayment] = useState<BalanceRequest | null>(null)
   const [approveOpen, setApproveOpen] = useState(false)
-  const [rejectPayment, setRejectPayment] = useState<Payment | null>(null)
+  const [rejectPayment, setRejectPayment] = useState<BalanceRequest | null>(null)
   const [rejectOpen, setRejectOpen] = useState(false)
   const [rejectReason, setRejectReason] = useState('')
 
@@ -127,8 +113,8 @@ export function AdminPayments() {
     })
   }
 
-  const pendingPayments = payments.filter((p) => p.status === 'pending')
-  const allPayments = payments
+  const pendingPayments = balanceRequests.filter((p) => p.status === 'pending')
+  const allPayments = balanceRequests
 
   const getFilteredPayments = () => {
     let list = activeTab === 'pending' ? pendingPayments : allPayments
@@ -149,23 +135,17 @@ export function AdminPayments() {
   const filteredPaymentIds = filteredPayments.map((p) => p.id)
 
   const pendingCount = pendingPayments.length
-  const approvedCount = payments.filter((p) => p.status === 'approved').length
-  const rejectedCount = payments.filter((p) => p.status === 'rejected').length
+  const approvedCount = balanceRequests.filter((p) => p.status === 'approved').length
+  const rejectedCount = balanceRequests.filter((p) => p.status === 'rejected').length
 
-  const handleViewDetails = (payment: Payment) => {
+  const handleViewDetails = (payment: BalanceRequest) => {
     setViewPayment(payment)
     setViewOpen(true)
   }
 
   const handleApprove = () => {
     if (approvePayment) {
-      setPayments((prev) =>
-        prev.map((p) =>
-          p.id === approvePayment.id
-            ? { ...p, status: 'approved' as PaymentStatus, notes: 'Verified and approved' }
-            : p
-        )
-      )
+      approveRequest(approvePayment.id, 'Verified and approved')
       toast.success(`Payment ${approvePayment.trxId} approved`, {
         description: `৳${approvePayment.amount.toFixed(2)} added to ${approvePayment.userName}'s balance`,
       })
@@ -175,13 +155,7 @@ export function AdminPayments() {
 
   const handleReject = () => {
     if (rejectPayment) {
-      setPayments((prev) =>
-        prev.map((p) =>
-          p.id === rejectPayment.id
-            ? { ...p, status: 'rejected' as PaymentStatus, notes: rejectReason || 'Rejected by admin' }
-            : p
-        )
-      )
+      rejectRequest(rejectPayment.id, rejectReason || 'Rejected by admin')
       toast.success(`Payment ${rejectPayment.trxId} rejected`)
       setRejectOpen(false)
       setRejectReason('')
@@ -190,33 +164,21 @@ export function AdminPayments() {
 
   const handleBulkApprove = () => {
     const count = selectedIds.size
-    setPayments((prev) =>
-      prev.map((p) =>
-        selectedIds.has(p.id) && p.status === 'pending'
-          ? { ...p, status: 'approved' as PaymentStatus, notes: 'Bulk approved' }
-          : p
-      )
-    )
-    toast.success(`${count} payment(s) approved`)
+    bulkApprove(Array.from(selectedIds))
+    toast.success(`${count} payment(s) approved — balances updated`)
     setSelectedIds(new Set())
     setBulkApproveOpen(false)
   }
 
   const handleBulkReject = () => {
     const count = selectedIds.size
-    setPayments((prev) =>
-      prev.map((p) =>
-        selectedIds.has(p.id) && p.status === 'pending'
-          ? { ...p, status: 'rejected' as PaymentStatus, notes: 'Bulk rejected' }
-          : p
-      )
-    )
+    bulkReject(Array.from(selectedIds))
     toast.success(`${count} payment(s) rejected`)
     setSelectedIds(new Set())
     setBulkRejectOpen(false)
   }
 
-  const renderPaymentsTable = (list: Payment[], showCheckbox = true) => (
+  const renderPaymentsTable = (list: BalanceRequest[], showCheckbox = true) => (
     <>
       {/* Bulk Action Bar */}
       {showCheckbox && selectedIds.size > 0 && (
@@ -292,9 +254,7 @@ export function AdminPayments() {
                   <TableCell className="font-medium">{payment.userName}</TableCell>
                   <TableCell className="font-semibold text-emerald-400">৳{payment.amount.toFixed(2)}</TableCell>
                   <TableCell>
-                    <Badge variant="outline" className="text-xs">
-                      {payment.method}
-                    </Badge>
+                    <MethodBadge method={payment.method} />
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">{payment.submittedAt}</TableCell>
                   <TableCell><PaymentStatusBadge status={payment.status} /></TableCell>
@@ -364,7 +324,7 @@ export function AdminPayments() {
       <div>
         <h2 className="text-2xl font-bold tracking-tight">Payment Management</h2>
         <p className="text-muted-foreground text-sm mt-1">
-          Review and process user payment submissions
+          Review and process user payment submissions. Approved payments add balance automatically.
         </p>
       </div>
 
@@ -377,8 +337,8 @@ export function AdminPayments() {
                 <CreditCard className="size-5 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{payments.length}</p>
-                <p className="text-xs text-muted-foreground">Total Payments</p>
+                <p className="text-2xl font-bold">{balanceRequests.length}</p>
+                <p className="text-xs text-muted-foreground">Total Requests</p>
               </div>
             </div>
           </CardContent>
@@ -424,7 +384,7 @@ export function AdminPayments() {
         </Card>
       </div>
 
-      {/* Search + Telegram Bot Status */}
+      {/* Search + Notification Indicator */}
       <Card>
         <CardContent className="p-4">
           <div className="flex flex-col sm:flex-row gap-3">
@@ -437,6 +397,12 @@ export function AdminPayments() {
                 className="pl-9"
               />
             </div>
+            {pendingCount > 0 && (
+              <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                <Bell className="size-4 text-amber-400 animate-pulse" />
+                <span className="text-sm text-amber-400 font-medium">{pendingCount} Pending Request{pendingCount > 1 ? 's' : ''}</span>
+              </div>
+            )}
             <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
               <Send className="size-4 text-emerald-400" />
               <span className="text-sm text-emerald-400 font-medium">Telegram Bot Active</span>
@@ -463,7 +429,7 @@ export function AdminPayments() {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Pending Payments</CardTitle>
-              <CardDescription>Review and approve or reject payment submissions</CardDescription>
+              <CardDescription>Review and approve or reject payment submissions. Approved amounts are added to user balance automatically.</CardDescription>
             </CardHeader>
             <CardContent className="p-0">
               {renderPaymentsTable(filteredPayments, true)}
@@ -517,7 +483,7 @@ export function AdminPayments() {
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground uppercase tracking-wider">Method</p>
-                  <Badge variant="outline">{viewPayment.method}</Badge>
+                  <MethodBadge method={viewPayment.method} />
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground uppercase tracking-wider">Status</p>
@@ -528,8 +494,8 @@ export function AdminPayments() {
                   <p className="text-sm">{viewPayment.submittedAt}</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Notes</p>
-                  <p className="text-sm">{viewPayment.notes || 'No notes'}</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Admin Note</p>
+                  <p className="text-sm">{viewPayment.adminNote || 'No notes'}</p>
                 </div>
               </div>
             </div>
@@ -568,7 +534,7 @@ export function AdminPayments() {
               Approve payment <strong>{approvePayment?.trxId}</strong> for{' '}
               <strong>৳{approvePayment?.amount.toFixed(2)}</strong> from{' '}
               <strong>{approvePayment?.userName}</strong>?
-              The amount will be added to their balance.
+              The amount will be automatically added to their balance.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -612,7 +578,7 @@ export function AdminPayments() {
             <AlertDialogTitle>Approve Selected Payments</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to approve <strong>{selectedIds.size}</strong> payment(s)?
-              The amounts will be added to the respective users&apos; balances.
+              The amounts will be automatically added to the respective users&apos; balances.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

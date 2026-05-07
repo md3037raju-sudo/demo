@@ -43,3 +43,44 @@ Stage Summary:
 - Logo now correctly switches between corex-logo-dark.png and corex-logo-light.png based on actual theme mode
 - Thunder animation (glow + flash) added to logo and activates on the hero section landing page
 - All pages using CoreXLogo/CoreXLogoIcon automatically benefit from the theme fix
+
+---
+Task ID: 3
+Agent: Main
+Task: Transaction history 90-day auto-vanish, Add Balance with Bkash/Nagad, TrxID submit, Admin approve flow, Admin Utility page
+
+Work Log:
+- Created `src/lib/payment-store.ts` (Zustand): BalanceRequest, Transaction, PaymentConfig models
+  - 90-day auto-vanish for transactions (isWithin90Days, getDaysBeforeVanish)
+  - submitBalanceRequest: User submits amount + method + trxId → creates pending request
+  - approveRequest: Admin approves → adds transaction + calls addBalanceToUser → balance updates
+  - rejectRequest: Admin rejects with note
+  - bulkApprove/bulkReject for batch operations
+  - PaymentConfig: bkashNumber, bkashType, nagadNumber, nagadType (admin controlled)
+- Created `src/lib/utility-store.ts` (Zustand): APK download URL, version, tutorial URL/title, changelog
+- Added `addBalance` and `addBalanceToUser` to auth-store.ts for cross-store balance updates
+- Completely rewrote `payments-page.tsx` (user side):
+  - "Add Balance" button opens dialog with Step 1 (select bKash/Nagad with premium logos) → Step 2 (number display with copy, amount selection, TrxID input)
+  - Shows user's balance requests with status badges (pending/approved/rejected)
+  - Transaction history with 90-day auto-vanish countdown badges (color-coded by urgency)
+  - Pending request notification banner
+- Updated `admin-payments.tsx` to use shared payment store:
+  - Approve → automatically adds balance to user via addBalanceToUser
+  - Method badges with bKash pink (#E2136E) and Nagad orange (#F6921E) branding
+  - Pending notification indicator with bell icon
+- Created `admin-utility.tsx` page:
+  - App Configuration: APK download URL, version, tutorial URL, tutorial title, changelog
+  - Payment Method Configuration: bKash number + type (personal/merchant), Nagad number + type
+  - User preview section showing how payment info appears to users
+  - Save buttons with toast confirmations
+- Updated `download-page.tsx` to use utility store:
+  - APK version from store, download link from store
+  - Tutorial card with link and changelog display
+- Added 'admin/utility' to navigation-store.ts and admin-layout.tsx sidebar
+
+Stage Summary:
+- Transaction history auto-vanishes after 90 days with visual countdown
+- Add Balance flow: Select bKash/Nagad → Copy number → Send payment → Submit TrxID → Admin approves → Balance added
+- Admin Payments page connected to shared store, approve actually adds balance
+- Admin Utility page controls APK link, tutorial link, payment method numbers
+- Everything is admin-controllable through the Utility settings page

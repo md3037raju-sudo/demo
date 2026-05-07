@@ -22,6 +22,7 @@ interface AuthState {
   loginAsUser: () => void
   logout: () => void
   deductBalance: (amount: number) => void
+  addBalance: (userId: string, amount: number) => void
 }
 
 const mockUser: User = {
@@ -89,4 +90,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ user: { ...user, balance: user.balance - amount } })
     }
   },
+  addBalance: (userId: string, amount: number) => {
+    const user = get().user
+    if (user && user.id === userId) {
+      set({ user: { ...user, balance: user.balance + amount } })
+    }
+  },
 }))
+
+// Standalone function for use by other stores (e.g. payment-store)
+export function addBalanceToUser(userId: string, amount: number) {
+  const { user } = useAuthStore.getState()
+  if (user && user.id === userId) {
+    useAuthStore.setState({ user: { ...user, balance: user.balance + amount } })
+  }
+}

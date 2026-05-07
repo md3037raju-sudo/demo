@@ -1,8 +1,9 @@
 'use client'
 
-import { Shield, ArrowLeft, Download, CheckCircle2, AlertTriangle, Smartphone, FileCheck, Lock, ChevronRight } from 'lucide-react'
+import { Shield, ArrowLeft, Download, CheckCircle2, AlertTriangle, Smartphone, FileCheck, Lock, ChevronRight, ExternalLink, BookOpen } from 'lucide-react'
 import { useAuthStore } from '@/lib/auth-store'
 import { useNavigationStore } from '@/lib/navigation-store'
+import { useUtilityStore } from '@/lib/utility-store'
 import { CoreXLogo } from '@/components/shared/corex-logo'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -12,6 +13,7 @@ import { Separator } from '@/components/ui/separator'
 export function DownloadPage() {
   const { isAuthenticated } = useAuthStore()
   const navigate = useNavigationStore((s) => s.navigate)
+  const { config } = useUtilityStore()
 
   if (!isAuthenticated) {
     return (
@@ -76,7 +78,7 @@ export function DownloadPage() {
               <div className="space-y-2">
                 <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">CoreX App</h2>
                 <div className="flex items-center justify-center gap-2 flex-wrap">
-                  <Badge variant="secondary">v2.1.0</Badge>
+                  <Badge variant="secondary">{config.apkVersion}</Badge>
                   <Badge variant="outline">24.5 MB</Badge>
                 </div>
               </div>
@@ -100,10 +102,12 @@ export function DownloadPage() {
               <Separator className="max-w-xs" />
 
               {/* Download Button */}
-              <Button size="lg" className="w-full max-w-xs h-12 text-base font-semibold gap-2">
-                <Download className="w-5 h-5" />
-                Download APK
-              </Button>
+              <a href={config.apkDownloadUrl} target="_blank" rel="noopener noreferrer" className="w-full max-w-xs">
+                <Button size="lg" className="w-full h-12 text-base font-semibold gap-2">
+                  <Download className="w-5 h-5" />
+                  Download APK
+                </Button>
+              </a>
 
               <p className="text-xs text-muted-foreground">
                 By downloading, you agree to the{' '}
@@ -163,6 +167,35 @@ export function DownloadPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Tutorial Link */}
+        {config.tutorialUrl && (
+          <Card className="border-primary/20 bg-primary/5">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg text-primary">
+                <BookOpen className="w-5 h-5" />
+                {config.tutorialTitle || 'Tutorial'}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">
+                Follow our step-by-step guide to configure CoreX on your device.
+              </p>
+              <a href={config.tutorialUrl} target="_blank" rel="noopener noreferrer">
+                <Button variant="outline" className="gap-2">
+                  <ExternalLink className="w-4 h-4" />
+                  Open Tutorial
+                </Button>
+              </a>
+              {config.appChangelog && (
+                <div className="mt-4 pt-4 border-t">
+                  <p className="text-xs font-medium text-muted-foreground mb-2">What's New in {config.apkVersion}:</p>
+                  <div className="text-sm text-muted-foreground whitespace-pre-line">{config.appChangelog}</div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Security Notice */}
         <Card className="border-amber-500/20 bg-amber-500/5">

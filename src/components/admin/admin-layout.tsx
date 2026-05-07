@@ -43,6 +43,7 @@ import {
   ArrowLeft,
   Ticket,
   ShieldCheck,
+  Settings2,
 } from 'lucide-react'
 import { ThemeToggle } from '@/components/shared/theme-toggle'
 import { AnimateIn } from '@/components/shared/animate-in'
@@ -61,6 +62,7 @@ import { AdminBroadcastPage as AdminBroadcast } from './admin-broadcast'
 import { AdminTicketsPage as AdminTickets } from './admin-tickets'
 import { AdminCmsPage as AdminCMS } from './admin-cms'
 import { AdminCoupons } from './admin-coupons'
+import { AdminUtility } from './admin-utility'
 import { use2FAStore } from '@/lib/2fa-store'
 
 interface NavItem {
@@ -87,6 +89,7 @@ const secondaryNavItems: NavItem[] = [
   { label: 'Tickets', icon: MessageSquare, page: 'admin/tickets' },
   { label: 'Coupons', icon: Ticket, page: 'admin/coupons' },
   { label: 'CMS', icon: FileEdit, page: 'admin/cms' },
+  { label: 'Utility', icon: Settings2, page: 'admin/utility' },
 ]
 
 function getPageTitle(page: string): string {
@@ -119,6 +122,8 @@ function getPageTitle(page: string): string {
       return 'CMS Management'
     case 'admin/coupons':
       return 'Coupon Management'
+    case 'admin/utility':
+      return 'Utility Settings'
     default:
       return 'Admin Panel'
   }
@@ -154,6 +159,8 @@ function renderAdminPage(page: string) {
       return <AnimateIn type="slide-up" key="admin-cms"><AdminCMS /></AnimateIn>
     case 'admin/coupons':
       return <AnimateIn type="slide-up" key="admin-coupons"><AdminCoupons /></AnimateIn>
+    case 'admin/utility':
+      return <AnimateIn type="slide-up" key="admin-utility"><AdminUtility /></AnimateIn>
     default:
       return <AnimateIn type="slide-up" key="admin-default"><AdminDashboard /></AnimateIn>
   }

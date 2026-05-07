@@ -27,6 +27,7 @@ export type Page =
   | 'admin/tickets'
   | 'admin/cms'
   | 'admin/coupons'
+  | 'admin/utility'
 
 interface NavigationState {
   currentPage: Page
@@ -50,7 +51,7 @@ const allValidPages: Page[] = [
   'admin', 'admin/users', 'admin/subscriptions',
   'admin/proxiespreset', 'admin/plans', 'admin/payments',
   'admin/rules', 'admin/logs', 'admin/devices',
-  'admin/db-init', 'admin/broadcast', 'admin/tickets', 'admin/cms', 'admin/coupons'
+  'admin/db-init', 'admin/broadcast', 'admin/tickets', 'admin/cms', 'admin/coupons', 'admin/utility'
 ]
 
 // Sync hash to store on load
