@@ -202,7 +202,7 @@ const docSections: DocSection[] = [
         title: 'How the Referral Program Works',
         description: 'Earn rewards by inviting friends to CoreX.',
         content:
-          'Share your unique referral code (found in Dashboard → Referrals) with friends. When they sign up using your code and complete their first month, you both earn a $5 account credit. There\'s no limit to how many people you can refer. Credits are automatically applied to your next billing cycle.',
+          'Share your unique referral code (found in Dashboard → Referrals) with friends. When they sign up using your code and complete their first month, you both earn a ৳5 account credit. There\'s no limit to how many people you can refer. Credits are automatically applied to your next billing cycle.',
       },
       {
         id: 'ref-2',

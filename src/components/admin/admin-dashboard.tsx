@@ -80,7 +80,7 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
     return (
       <div className="rounded-lg border bg-card px-3 py-2 shadow-md">
         <p className="text-xs text-muted-foreground">{label}</p>
-        <p className="text-sm font-bold">${payload[0].value}</p>
+        <p className="text-sm font-bold">৳{payload[0].value}</p>
       </div>
     )
   }
@@ -158,7 +158,7 @@ export function AdminDashboard() {
                 <p className="text-sm text-muted-foreground">Active Subscriptions</p>
                 <p className="text-3xl font-bold">4</p>
                 <p className="text-xs text-muted-foreground">
-                  Revenue: <span className="text-emerald-500 font-medium">$369.96</span>
+                  Revenue: <span className="text-emerald-500 font-medium">৳369.96</span>
                 </p>
               </div>
               <div className="flex size-12 items-center justify-center rounded-xl bg-teal-500/10">
@@ -175,7 +175,7 @@ export function AdminDashboard() {
                 <p className="text-sm text-muted-foreground">Total Referrals</p>
                 <p className="text-3xl font-bold">{totalReferrals}</p>
                 <p className="text-xs text-muted-foreground">
-                  Rewards: <span className="text-emerald-500 font-medium">${totalRewardsGiven.toFixed(2)}</span>
+                  Rewards: <span className="text-emerald-500 font-medium">৳{totalRewardsGiven.toFixed(2)}</span>
                 </p>
               </div>
               <div className="flex size-12 items-center justify-center rounded-xl bg-primary/10">
@@ -190,7 +190,7 @@ export function AdminDashboard() {
             <div className="flex items-center justify-between">
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">Total Revenue</p>
-                <p className="text-3xl font-bold">$1,247<span className="text-lg">.50</span></p>
+                <p className="text-3xl font-bold">৳1,247<span className="text-lg">.50</span></p>
                 <p className="text-xs text-emerald-500 flex items-center gap-1">
                   <TrendingUp className="size-3" />
                   +15.3% from last month
@@ -227,7 +227,7 @@ export function AdminDashboard() {
                   fontSize={12}
                   tickLine={false}
                   axisLine={false}
-                  tickFormatter={(value) => `$${value}`}
+                  tickFormatter={(value) => `৳${value}`}
                 />
                 <Tooltip content={<CustomTooltip />} />
                 <Line

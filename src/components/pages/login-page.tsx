@@ -420,8 +420,8 @@ export function LoginPage() {
             </DialogTitle>
             <DialogDescription>
               {referralSuccess
-                ? `A welcome bonus of $${settings.referredReward.toFixed(2)} has been added to your account!`
-                : `Enter a referral code to receive a $${settings.referredReward.toFixed(2)} welcome bonus. You can skip this step and add a code later from your dashboard.`}
+                ? `A welcome bonus of ৳${settings.referredReward.toFixed(2)} has been added to your account!`
+                : `Enter a referral code to receive a ৳${settings.referredReward.toFixed(2)} welcome bonus. You can skip this step and add a code later from your dashboard.`}
             </DialogDescription>
           </DialogHeader>
 

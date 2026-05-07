@@ -138,3 +138,51 @@
 - **globals.css**: Added theme preset CSS variable overrides for Ocean (hue 220), Rose (hue 350), Midnight (hue 290) — each with light and dark mode variants overriding `--primary`, `--primary-foreground`, `--ring`, `--chart-1/2/3`, `--corex`, `--corex-foreground`; added animation system: `.animate-enabled *` with 150ms transitions, `.animate-fade-in`, `.animate-slide-up`, `.animate-scale-in` keyframe animations (fadeIn, slideUp, scaleIn), `:not(.animate-enabled) *` with 0ms transition/animation override
 
 ## Status: All lint passing, dev server running on port 3000
+
+---
+Task ID: 1-c
+Agent: lib-pages-currency-fixer
+Task: Replace $ with ৳ in lib and pages files
+
+Work Log:
+- Read and edited coupon-store.ts: replaced 1 currency $ with ৳ (template literal `$${coupon.minPurchase.toFixed(2)}` → `৳${coupon.minPurchase.toFixed(2)}`)
+- Read and edited mock-data.ts: replaced 5 currency $ with ৳ (`$5.00` in activity logs (2 instances), `$500` in activity log, `$75` in activity log, `$5 flat discount` in coupon description)
+- Read and edited docs-page.tsx: replaced 1 currency $ with ৳ (`$5 account credit` → `৳5 account credit`)
+- Read and edited login-page.tsx: replaced 2 currency $ with ৳ (`$${settings.referredReward.toFixed(2)}` → `৳${settings.referredReward.toFixed(2)}` in two places)
+
+Stage Summary:
+- All currency symbols in lib and pages files changed from $ to ৳
+
+---
+Task ID: 1-b
+Agent: admin-currency-fixer
+Task: Replace $ with ৳ in admin component files
+
+Work Log:
+- Read and edited admin-users.tsx: replaced 6 currency $ with ৳ (template literal in toast, table cell balance, view details balance, balance history balance after, edit balance current/previous)
+- Read and edited admin-dashboard.tsx: replaced 5 currency $ with ৳ (CustomTooltip, $369.96 revenue, totalRewardsGiven, $1,247.50 total revenue, YAxis tickFormatter)
+- Read and edited admin-coupons.tsx: replaced 9 currency $ with ৳ (CSV export $${c.discount.toFixed(2)}, stats totalDiscount, table fixed value, minPurchase cell, discount value input prefix $ → ৳, Min Purchase ($) label, Max Discount ($) label, claim discount amount, total discount given)
+- Read and edited admin-payments.tsx: replaced 5 currency $ with ৳ (approve toast description, payment table amount, view details amount, approve confirmation amount, reject dialog amount)
+- Read and edited admin-plans.tsx: replaced 1 currency $ with ৳ (Price ($) label → Price (৳))
+- Read and edited admin-rules.tsx: replaced 5 currency $ with ৳ (referral settings toast with 3 currency $, 4 span element input prefixes $ → ৳ for Referrer Reward, New User Reward, Minimum Withdrawal, Commission Value)
+- Read and edited admin-broadcast.tsx: replaced 1 currency $ with ৳ ($10 per referral → ৳10 per referral)
+- Read and edited admin-tickets.tsx: replaced 1 currency $ with ৳ ($500 via bKash → ৳500 via bKash)
+- Read and edited admin-cms.tsx: replaced 2 currency $ with ৳ ($5.00 referral earnings in doc content, 2 instances)
+- Read and edited admin-subscriptions.tsx: replaced 3 currency $ with ৳ (subscription table price, recycle bin price, view details price)
+
+Stage Summary:
+- All currency symbols in admin components changed from $ to ৳
+
+---
+Task ID: 1-a
+Agent: dashboard-currency-fixer
+Task: Replace $ with ৳ in dashboard component files
+
+Work Log:
+- Read and edited overview-page.tsx: replaced 15 currency $ with ৳
+- Read and edited payments-page.tsx: replaced 6 currency $ with ৳
+- Read and edited subscriptions-page.tsx: replaced 1 currency $ with ৳
+- Read and edited referrals-page.tsx: replaced 12 currency $ with ৳
+
+Stage Summary:
+- All currency symbols in dashboard components changed from $ to ৳

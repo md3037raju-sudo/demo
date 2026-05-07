@@ -350,7 +350,7 @@ export function AdminPlans() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="plan-price">Price ($)</Label>
+                <Label htmlFor="plan-price">Price (৳)</Label>
                 <Input
                   id="plan-price"
                   type="number"

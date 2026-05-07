@@ -90,7 +90,7 @@ const mockBroadcasts: Broadcast[] = [
   {
     id: 'bc_004',
     title: 'Referral Bonus Weekend',
-    message: 'This weekend only: earn double referral credits! Share your code with friends and earn $10 per referral.',
+    message: 'This weekend only: earn double referral credits! Share your code with friends and earn ৳10 per referral.',
     target: 'Free Users Only',
     type: 'info',
     priority: 'normal',

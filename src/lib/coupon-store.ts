@@ -70,7 +70,7 @@ export const useCouponStore = create<CouponState>((set, get) => ({
     if (coupon.currentClaims >= coupon.maxClaims) return { valid: false, error: 'This coupon has reached its maximum claims', coupon }
     if (coupon.claimedBy.some((c) => c.userId === userId)) return { valid: false, error: 'You have already used this coupon', coupon }
     if (coupon.applicablePlans.length > 0 && !coupon.applicablePlans.includes(planId)) return { valid: false, error: 'This coupon is not applicable to the selected plan', coupon }
-    if (planPrice < coupon.minPurchase) return { valid: false, error: `Minimum purchase of $${coupon.minPurchase.toFixed(2)} required`, coupon }
+    if (planPrice < coupon.minPurchase) return { valid: false, error: `Minimum purchase of ৳${coupon.minPurchase.toFixed(2)} required`, coupon }
 
     let discount = 0
     if (coupon.type === 'percentage') {

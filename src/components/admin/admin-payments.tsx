@@ -167,7 +167,7 @@ export function AdminPayments() {
         )
       )
       toast.success(`Payment ${approvePayment.trxId} approved`, {
-        description: `$${approvePayment.amount.toFixed(2)} added to ${approvePayment.userName}'s balance`,
+        description: `৳${approvePayment.amount.toFixed(2)} added to ${approvePayment.userName}'s balance`,
       })
       setApproveOpen(false)
     }
@@ -290,7 +290,7 @@ export function AdminPayments() {
                   )}
                   <TableCell className="font-mono text-xs">{payment.trxId}</TableCell>
                   <TableCell className="font-medium">{payment.userName}</TableCell>
-                  <TableCell className="font-semibold text-emerald-400">${payment.amount.toFixed(2)}</TableCell>
+                  <TableCell className="font-semibold text-emerald-400">৳{payment.amount.toFixed(2)}</TableCell>
                   <TableCell>
                     <Badge variant="outline" className="text-xs">
                       {payment.method}
@@ -513,7 +513,7 @@ export function AdminPayments() {
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground uppercase tracking-wider">Amount</p>
-                  <p className="text-sm font-semibold text-emerald-400">${viewPayment.amount.toFixed(2)}</p>
+                  <p className="text-sm font-semibold text-emerald-400">৳{viewPayment.amount.toFixed(2)}</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground uppercase tracking-wider">Method</p>
@@ -566,7 +566,7 @@ export function AdminPayments() {
             <AlertDialogTitle>Approve Payment</AlertDialogTitle>
             <AlertDialogDescription>
               Approve payment <strong>{approvePayment?.trxId}</strong> for{' '}
-              <strong>${approvePayment?.amount.toFixed(2)}</strong> from{' '}
+              <strong>৳{approvePayment?.amount.toFixed(2)}</strong> from{' '}
               <strong>{approvePayment?.userName}</strong>?
               The amount will be added to their balance.
             </AlertDialogDescription>
@@ -586,7 +586,7 @@ export function AdminPayments() {
           <DialogHeader>
             <DialogTitle>Reject Payment</DialogTitle>
             <DialogDescription>
-              Reject payment {rejectPayment?.trxId} for ${rejectPayment?.amount.toFixed(2)} from {rejectPayment?.userName}
+              Reject payment {rejectPayment?.trxId} for ৳{rejectPayment?.amount.toFixed(2)} from {rejectPayment?.userName}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">

@@ -93,7 +93,7 @@ const initialTickets: TicketData[] = [
   {
     ...mockTickets[2],
     conversation: [
-      { id: 'm9', sender: 'user', name: 'James Wilson', content: 'I made a payment of $500 via bKash but my balance hasn\'t been updated.', timestamp: '2025-02-10 18:00' },
+      { id: 'm9', sender: 'user', name: 'James Wilson', content: 'I made a payment of ৳500 via bKash but my balance hasn\'t been updated.', timestamp: '2025-02-10 18:00' },
       { id: 'm10', sender: 'admin', name: 'Admin CoreX', content: 'Please share your transaction ID so we can verify the payment.', timestamp: '2025-02-10 19:00' },
     ],
   },

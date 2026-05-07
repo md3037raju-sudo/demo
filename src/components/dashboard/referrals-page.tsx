@@ -57,7 +57,7 @@ export function ReferralsPage() {
     if (result.success) {
       setReferralCodeInput('')
       setReferralSuccessOpen(true)
-      toast.success(`Welcome bonus of $${settings.referredReward.toFixed(2)} applied!`)
+      toast.success(`Welcome bonus of ৳${settings.referredReward.toFixed(2)} applied!`)
     } else {
       toast.error(result.error || 'Invalid referral code')
     }
@@ -65,7 +65,7 @@ export function ReferralsPage() {
 
   const handleWithdraw = () => {
     if (!canWithdraw) {
-      toast.error(`Minimum withdrawal amount is $${settings.minWithdrawal.toFixed(2)}`)
+      toast.error(`Minimum withdrawal amount is ৳${settings.minWithdrawal.toFixed(2)}`)
       return
     }
     setWithdrawDialogOpen(true)
@@ -73,7 +73,7 @@ export function ReferralsPage() {
 
   const confirmWithdraw = () => {
     setWithdrawDialogOpen(false)
-    toast.success(`Withdrawal of $${totalEarnings.toFixed(2)} initiated!`)
+    toast.success(`Withdrawal of ৳${totalEarnings.toFixed(2)} initiated!`)
   }
 
   // Check if user has already been referred (entered a code)
@@ -94,7 +94,7 @@ export function ReferralsPage() {
               Enter Referral Code
             </CardTitle>
             <CardDescription>
-              Have a referral code? Enter it below to receive a welcome bonus of ${settings.referredReward.toFixed(2)}!
+              Have a referral code? Enter it below to receive a welcome bonus of ৳{settings.referredReward.toFixed(2)}!
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -138,8 +138,8 @@ export function ReferralsPage() {
             </Button>
           </div>
           <p className="text-sm text-muted-foreground">
-            Share this code with friends. They&apos;ll get a ${settings.referredReward.toFixed(2)} welcome
-            bonus on sign-up, and you&apos;ll earn ${settings.referrerReward.toFixed(2)} in credits for each successful referral.
+            Share this code with friends. They&apos;ll get a ৳{settings.referredReward.toFixed(2)} welcome
+            bonus on sign-up, and you&apos;ll earn ৳{settings.referrerReward.toFixed(2)} in credits for each successful referral.
           </p>
         </CardContent>
       </Card>
@@ -170,7 +170,7 @@ export function ReferralsPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalEarnings.toFixed(2)}</div>
+            <div className="text-2xl font-bold">৳{totalEarnings.toFixed(2)}</div>
           </CardContent>
         </Card>
 
@@ -195,7 +195,7 @@ export function ReferralsPage() {
             </Button>
             {!canWithdraw && (
               <p className="text-xs text-muted-foreground text-center">
-                Min. withdrawal: ${settings.minWithdrawal.toFixed(2)}
+                Min. withdrawal: ৳{settings.minWithdrawal.toFixed(2)}
               </p>
             )}
           </CardContent>
@@ -244,7 +244,7 @@ export function ReferralsPage() {
                       )}
                     </TableCell>
                     <TableCell className="text-emerald-400 font-medium">
-                      ${ref.referrerReward.toFixed(2)}
+                      ৳{ref.referrerReward.toFixed(2)}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -265,7 +265,7 @@ export function ReferralsPage() {
               Welcome Bonus Applied!
             </DialogTitle>
             <DialogDescription>
-              Your referral code was accepted. A welcome bonus of ${settings.referredReward.toFixed(2)} has been added to your account.
+              Your referral code was accepted. A welcome bonus of ৳{settings.referredReward.toFixed(2)} has been added to your account.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -293,11 +293,11 @@ export function ReferralsPage() {
           <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Available Earnings</span>
-              <span className="font-bold text-emerald-400">${totalEarnings.toFixed(2)}</span>
+              <span className="font-bold text-emerald-400">৳{totalEarnings.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Min. Withdrawal</span>
-              <span>${settings.minWithdrawal.toFixed(2)}</span>
+              <span>৳{settings.minWithdrawal.toFixed(2)}</span>
             </div>
           </div>
           <DialogFooter className="gap-2 sm:gap-2">

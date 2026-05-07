@@ -114,7 +114,7 @@ export function AdminRules() {
       commissionValue: parseFloat(commissionValue) || 0,
     })
     toast.success('Referral settings saved', {
-      description: `Referrer: $${referrerReward}, New user: $${referredReward}, Min withdrawal: $${minWithdrawal}`,
+      description: `Referrer: ৳${referrerReward}, New user: ৳${referredReward}, Min withdrawal: ৳${minWithdrawal}`,
     })
   }
 
@@ -274,7 +274,7 @@ export function AdminRules() {
               <Label>Referrer Reward</Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-                  $
+                  ৳
                 </span>
                 <Input
                   type="number"
@@ -290,7 +290,7 @@ export function AdminRules() {
               <Label>New User Reward</Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-                  $
+                  ৳
                 </span>
                 <Input
                   type="number"
@@ -306,7 +306,7 @@ export function AdminRules() {
               <Label>Minimum Withdrawal Amount</Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-                  $
+                  ৳
                 </span>
                 <Input
                   type="number"
@@ -349,7 +349,7 @@ export function AdminRules() {
                 ) : (
                   <>
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-                      $
+                      ৳
                     </span>
                     <Input
                       type="number"

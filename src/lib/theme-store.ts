@@ -35,7 +35,7 @@ function applyThemeToDOM(mode: ThemeMode, preset: ThemePreset, animationsEnabled
 export const useThemeStore = create<ThemeState>((set, get) => ({
   mode: 'dark',
   preset: 'emerald',
-  animationsEnabled: true,
+  animationsEnabled: false,
 
   setMode: (mode) => {
     set({ mode })

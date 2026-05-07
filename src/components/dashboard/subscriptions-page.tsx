@@ -82,7 +82,7 @@ export function SubscriptionsPage() {
                     <TableCell>{getStatusBadge(sub.status)}</TableCell>
                     <TableCell>{sub.startDate}</TableCell>
                     <TableCell>{sub.expiryDate}</TableCell>
-                    <TableCell>${sub.price.toFixed(2)}</TableCell>
+                    <TableCell>৳{sub.price.toFixed(2)}</TableCell>
                     <TableCell>
                       {renewableUntil ? (
                         <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 hover:bg-amber-500/30">

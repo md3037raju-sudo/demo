@@ -248,7 +248,7 @@ export function AdminCoupons() {
   const handleExportCSV = () => {
     if (!claimsCoupon) return
     const headers = 'User,Claimed At,Discount Amount\n'
-    const rows = claimsCoupon.claimedBy.map((c) => `${c.userName},${c.claimedAt},$${c.discount.toFixed(2)}`).join('\n')
+    const rows = claimsCoupon.claimedBy.map((c) => `${c.userName},${c.claimedAt},৳${c.discount.toFixed(2)}`).join('\n')
     const blob = new Blob([headers + rows], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -265,7 +265,7 @@ export function AdminCoupons() {
     { title: 'Total Coupons', value: totalCoupons, icon: Ticket, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
     { title: 'Active Coupons', value: activeCoupons, icon: Tag, color: 'text-teal-400', bg: 'bg-teal-500/10' },
     { title: 'Total Claims', value: totalClaims, icon: Users, color: 'text-amber-400', bg: 'bg-amber-500/10' },
-    { title: 'Total Discount', value: `$${totalDiscount.toFixed(2)}`, icon: DollarSign, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+    { title: 'Total Discount', value: `৳${totalDiscount.toFixed(2)}`, icon: DollarSign, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
   ]
 
   return (
@@ -390,10 +390,10 @@ export function AdminCoupons() {
                       )}
                     </TableCell>
                     <TableCell className="font-medium">
-                      {coupon.type === 'percentage' ? `${coupon.value}%` : `$${coupon.value.toFixed(2)}`}
+                      {coupon.type === 'percentage' ? `${coupon.value}%` : `৳${coupon.value.toFixed(2)}`}
                     </TableCell>
                     <TableCell className="hidden lg:table-cell text-sm">
-                      ${coupon.minPurchase.toFixed(2)}
+                      ৳{coupon.minPurchase.toFixed(2)}
                     </TableCell>
                     <TableCell>
                       <div className="space-y-1 min-w-[80px]">
@@ -535,7 +535,7 @@ export function AdminCoupons() {
                 <Label>Discount Value</Label>
                 <div className="relative">
                   {formType === 'fixed' && (
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">৳</span>
                   )}
                   <Input
                     type="number"
@@ -555,7 +555,7 @@ export function AdminCoupons() {
             {/* Min Purchase + Max Discount */}
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Min Purchase ($)</Label>
+                <Label>Min Purchase (৳)</Label>
                 <Input
                   type="number"
                   value={formMinPurchase}
@@ -566,7 +566,7 @@ export function AdminCoupons() {
               </div>
               {formType === 'percentage' && (
                 <div className="space-y-2">
-                  <Label>Max Discount ($)</Label>
+                  <Label>Max Discount (৳)</Label>
                   <Input
                     type="number"
                     value={formMaxDiscount}
@@ -690,7 +690,7 @@ export function AdminCoupons() {
                       <TableCell className="font-medium">{claim.userName}</TableCell>
                       <TableCell>{claim.claimedAt}</TableCell>
                       <TableCell className="text-emerald-400 font-medium">
-                        -${claim.discount.toFixed(2)}
+                        -৳{claim.discount.toFixed(2)}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -702,7 +702,7 @@ export function AdminCoupons() {
               <div className="flex items-center justify-between">
                 <div className="text-sm text-muted-foreground">
                   Total discount given: <span className="font-medium text-emerald-400">
-                    ${claimsCoupon.claimedBy.reduce((s, c) => s + c.discount, 0).toFixed(2)}
+                    ৳{claimsCoupon.claimedBy.reduce((s, c) => s + c.discount, 0).toFixed(2)}
                   </span>
                 </div>
                 <Button variant="outline" size="sm" className="gap-1.5" onClick={handleExportCSV}>

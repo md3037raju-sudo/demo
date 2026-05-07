@@ -153,7 +153,7 @@ export function OverviewPage() {
     setCouponDiscount(result.discount || 0)
     setCouponError('')
     toast.success('Coupon applied!', {
-      description: `You save $${(result.discount || 0).toFixed(2)} on this purchase.`,
+      description: `You save ৳${(result.discount || 0).toFixed(2)} on this purchase.`,
     })
   }
 
@@ -214,9 +214,9 @@ export function OverviewPage() {
     setCouponDiscount(0)
     setCouponError('')
 
-    const discountMsg = couponDiscount > 0 ? ` $${couponDiscount.toFixed(2)} coupon discount applied.` : ''
+    const discountMsg = couponDiscount > 0 ? ` ৳${couponDiscount.toFixed(2)} coupon discount applied.` : ''
     toast.success('Subscription purchased!', {
-      description: `${selectedPlan.name} (${selectedPlan.period}) has been activated. $${finalPrice.toFixed(2)} deducted from your balance.${discountMsg}`,
+      description: `${selectedPlan.name} (${selectedPlan.period}) has been activated. ৳${finalPrice.toFixed(2)} deducted from your balance.${discountMsg}`,
     })
   }
 
@@ -246,7 +246,7 @@ export function OverviewPage() {
     },
     {
       title: 'Balance',
-      value: `$${balance.toFixed(2)}`,
+      value: `৳${balance.toFixed(2)}`,
       icon: Wallet,
       color: 'text-emerald-400',
       bg: 'bg-emerald-500/10',
@@ -334,7 +334,7 @@ export function OverviewPage() {
                   </TableCell>
                   <TableCell>{sub.startDate}</TableCell>
                   <TableCell>{sub.expiryDate}</TableCell>
-                  <TableCell>${sub.price.toFixed(2)}</TableCell>
+                  <TableCell>৳{sub.price.toFixed(2)}</TableCell>
                   <TableCell>
                     <Button
                       variant="outline"
@@ -420,7 +420,7 @@ export function OverviewPage() {
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="text-right">
-                        <div className="text-xl font-bold">${plan.price.toFixed(2)}</div>
+                        <div className="text-xl font-bold">৳{plan.price.toFixed(2)}</div>
                         <div className="text-xs text-muted-foreground">per {plan.period.toLowerCase()}</div>
                       </div>
                       <Button
@@ -480,11 +480,11 @@ export function OverviewPage() {
                     <div className="text-right font-bold text-lg">
                       {couponDiscount > 0 ? (
                         <div className="space-y-1">
-                          <span className="line-through text-muted-foreground text-sm">${selectedPlan.price.toFixed(2)}</span>
-                          <div className="text-emerald-400">${finalPrice.toFixed(2)}</div>
+                          <span className="line-through text-muted-foreground text-sm">৳{selectedPlan.price.toFixed(2)}</span>
+                          <div className="text-emerald-400">৳{finalPrice.toFixed(2)}</div>
                         </div>
                       ) : (
-                        `$${selectedPlan.price.toFixed(2)}`
+                        `৳${selectedPlan.price.toFixed(2)}`
                       )}
                     </div>
                   </div>
@@ -505,7 +505,7 @@ export function OverviewPage() {
                         <Tag className="size-4 text-emerald-400" />
                         <div>
                           <code className="font-mono text-sm font-bold text-emerald-400">{appliedCoupon.code}</code>
-                          <p className="text-xs text-emerald-300">Coupon applied! You save ${couponDiscount.toFixed(2)}</p>
+                          <p className="text-xs text-emerald-300">Coupon applied! You save ৳{couponDiscount.toFixed(2)}</p>
                         </div>
                       </div>
                       <Button
@@ -545,7 +545,7 @@ export function OverviewPage() {
                   {couponDiscount > 0 && (
                     <div className="flex items-center justify-between text-sm pt-1">
                       <span className="text-muted-foreground">Coupon Discount</span>
-                      <span className="font-semibold text-emerald-400">-${couponDiscount.toFixed(2)}</span>
+                      <span className="font-semibold text-emerald-400">-৳{couponDiscount.toFixed(2)}</span>
                     </div>
                   )}
                 </CardContent>
@@ -556,7 +556,7 @@ export function OverviewPage() {
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Current Balance</span>
-                    <span className="font-semibold">${balance.toFixed(2)}</span>
+                    <span className="font-semibold">৳{balance.toFixed(2)}</span>
                   </div>
                   <Separator className="my-2" />
                   <div className="flex items-center justify-between text-sm">
@@ -564,7 +564,7 @@ export function OverviewPage() {
                       {couponDiscount > 0 ? 'After Purchase (with discount)' : 'After Purchase'}
                     </span>
                     <span className={`font-semibold ${balance < finalPrice ? 'text-red-400' : 'text-emerald-400'}`}>
-                      ${(balance - finalPrice).toFixed(2)}
+                      ৳{(balance - finalPrice).toFixed(2)}
                     </span>
                   </div>
                   {couponDiscount > 0 && (
@@ -572,7 +572,7 @@ export function OverviewPage() {
                       <Separator className="my-2" />
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground">You Save</span>
-                        <span className="font-semibold text-emerald-400">${couponDiscount.toFixed(2)}</span>
+                        <span className="font-semibold text-emerald-400">৳{couponDiscount.toFixed(2)}</span>
                       </div>
                     </>
                   )}
@@ -583,7 +583,7 @@ export function OverviewPage() {
                       <div>
                         <p className="text-sm font-medium text-red-400">Insufficient Balance</p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          You need ${(finalPrice - balance).toFixed(2)} more. Add funds to your balance to complete this purchase.
+                          You need ৳{(finalPrice - balance).toFixed(2)} more. Add funds to your balance to complete this purchase.
                         </p>
                         <Button
                           variant="outline"

@@ -107,7 +107,7 @@ const defaultDocArticles: DocArticle[] = [
     id: 'doc_005',
     title: 'Referral Program',
     description: 'Earn credits by referring friends to CoreX',
-    content: '# Referral Program\n\nShare your unique referral code and earn $5.00 for each successful referral.\n\n## How It Works\n\n1. Copy your referral code from Dashboard > Referrals\n2. Share it with friends\n3. When they sign up and make their first payment, you earn $5.00',
+    content: '# Referral Program\n\nShare your unique referral code and earn ৳5.00 for each successful referral.\n\n## How It Works\n\n1. Copy your referral code from Dashboard > Referrals\n2. Share it with friends\n3. When they sign up and make their first payment, you earn ৳5.00',
     category: 'Billing',
   },
   {

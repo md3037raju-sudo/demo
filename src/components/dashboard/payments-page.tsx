@@ -45,12 +45,12 @@ function TypeBadge({ type }: { type: 'payment' | 'topup' | 'refund' }) {
 function AmountDisplay({ amount, type }: { amount: number; type: 'payment' | 'topup' | 'refund' }) {
   const formatted = Math.abs(amount).toFixed(2)
   if (type === 'payment') {
-    return <span className="text-red-400 font-medium">-${formatted}</span>
+    return <span className="text-red-400 font-medium">-৳{formatted}</span>
   }
   if (type === 'topup') {
-    return <span className="text-emerald-400 font-medium">+${formatted}</span>
+    return <span className="text-emerald-400 font-medium">+৳{formatted}</span>
   }
-  return <span className="text-amber-400 font-medium">+${formatted}</span>
+  return <span className="text-amber-400 font-medium">+৳{formatted}</span>
 }
 
 const presetAmounts = [10, 25, 50, 100, 250]
@@ -71,7 +71,7 @@ export function PaymentsPage() {
       return
     }
     setBalance((prev) => prev + numAmount)
-    toast.success(`$${numAmount.toFixed(2)} added to your balance!`)
+    toast.success(`৳${numAmount.toFixed(2)} added to your balance!`)
     setAmount('')
   }
 
@@ -111,13 +111,13 @@ export function PaymentsPage() {
                 size="sm"
                 onClick={() => handlePresetAmount(preset)}
               >
-                ${preset}
+                ৳{preset}
               </Button>
             ))}
           </div>
           <div className="flex items-center gap-2 text-sm">
             <span className="text-muted-foreground">Current balance:</span>
-            <span className="text-lg font-bold text-emerald-400">${balance.toFixed(2)}</span>
+            <span className="text-lg font-bold text-emerald-400">৳{balance.toFixed(2)}</span>
           </div>
         </CardContent>
       </Card>

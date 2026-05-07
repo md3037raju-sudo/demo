@@ -289,14 +289,14 @@ export const mockAdminPayments = [
 export const mockActivityLogs = [
   { id: 'log_001', type: 'normal' as const, user: 'Alex Morgan', action: 'Logged in via Google', timestamp: '2025-02-11 14:30:00', ip: '103.48.xxx.xxx' },
   { id: 'log_002', type: 'paid' as const, user: 'Sarah Chen', action: 'Subscribed to CoreX Enterprise (Yearly)', timestamp: '2025-02-10 09:15:00', ip: '45.64.xxx.xxx' },
-  { id: 'log_003', type: 'referral' as const, user: 'Alex Morgan', action: 'Referred Lisa Anderson — earned $5.00', timestamp: '2025-02-08 16:45:00', ip: '103.48.xxx.xxx' },
+  { id: 'log_003', type: 'referral' as const, user: 'Alex Morgan', action: 'Referred Lisa Anderson — earned ৳5.00', timestamp: '2025-02-08 16:45:00', ip: '103.48.xxx.xxx' },
   { id: 'log_004', type: 'normal' as const, user: 'Mike Johnson', action: 'Downloaded CoreX APK', timestamp: '2025-02-07 11:20:00', ip: '119.30.xxx.xxx' },
-  { id: 'log_005', type: 'paid' as const, user: 'James Wilson', action: 'Balance top-up request: $500 (bKash)', timestamp: '2025-02-10 18:00:00', ip: '37.111.xxx.xxx' },
+  { id: 'log_005', type: 'paid' as const, user: 'James Wilson', action: 'Balance top-up request: ৳500 (bKash)', timestamp: '2025-02-10 18:00:00', ip: '37.111.xxx.xxx' },
   { id: 'log_006', type: 'normal' as const, user: 'Emily Davis', action: 'Device released: OnePlus 12', timestamp: '2025-02-05 08:30:00', ip: '182.48.xxx.xxx' },
-  { id: 'log_007', type: 'referral' as const, user: 'Sarah Chen', action: 'Referred Raj Patel — earned $5.00', timestamp: '2025-02-04 13:10:00', ip: '45.64.xxx.xxx' },
+  { id: 'log_007', type: 'referral' as const, user: 'Sarah Chen', action: 'Referred Raj Patel — earned ৳5.00', timestamp: '2025-02-04 13:10:00', ip: '45.64.xxx.xxx' },
   { id: 'log_008', type: 'paid' as const, user: 'Alex Morgan', action: 'Subscription renewed: CoreX Pro', timestamp: '2025-02-01 00:00:00', ip: 'System' },
   { id: 'log_009', type: 'normal' as const, user: 'Admin CoreX', action: 'Banned user Emily Davis', timestamp: '2025-01-28 10:00:00', ip: 'Admin Panel' },
-  { id: 'log_010', type: 'paid' as const, user: 'Lisa Anderson', action: 'Balance top-up: $75 (Nagad)', timestamp: '2025-01-27 15:45:00', ip: '203.45.xxx.xxx' },
+  { id: 'log_010', type: 'paid' as const, user: 'Lisa Anderson', action: 'Balance top-up: ৳75 (Nagad)', timestamp: '2025-01-27 15:45:00', ip: '203.45.xxx.xxx' },
 ]
 
 export const mockTickets = [
@@ -348,7 +348,7 @@ export const mockCoupons: Coupon[] = [
   {
     id: 'coup_002',
     code: 'BDAY5',
-    description: '$5 flat discount on any plan',
+    description: '৳5 flat discount on any plan',
     type: 'fixed',
     value: 5,
     minPurchase: 10,

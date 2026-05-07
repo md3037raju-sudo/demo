@@ -230,7 +230,7 @@ export function AdminUsers() {
         prev.map((u) => (u.id === balanceUser.id ? { ...u, balance: newBalance } : u))
       )
       toast.success(`Balance updated for ${balanceUser.name}`, {
-        description: `New balance: $${newBalance.toFixed(2)}`,
+        description: `New balance: ৳${newBalance.toFixed(2)}`,
       })
       setBalanceOpen(false)
     }
@@ -457,7 +457,7 @@ export function AdminUsers() {
                       <TableCell className="text-muted-foreground text-sm">{user.email}</TableCell>
                       <TableCell><ProviderBadge provider={user.provider} /></TableCell>
                       <TableCell><RoleBadge role={user.role} /></TableCell>
-                      <TableCell>${user.balance.toFixed(2)}</TableCell>
+                      <TableCell>৳{user.balance.toFixed(2)}</TableCell>
                       <TableCell><StatusBadge status={user.status} /></TableCell>
                       <TableCell className="text-center">{user.subscriptions}</TableCell>
                       <TableCell className="text-center">{user.devices}</TableCell>
@@ -573,7 +573,7 @@ export function AdminUsers() {
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground uppercase tracking-wider">Balance</p>
-                  <p className="text-sm font-semibold text-emerald-400">${viewUser.balance.toFixed(2)}</p>
+                  <p className="text-sm font-semibold text-emerald-400">৳{viewUser.balance.toFixed(2)}</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground uppercase tracking-wider">Subscriptions</p>
@@ -622,7 +622,7 @@ export function AdminUsers() {
                               {entry.amount >= 0 ? '+' : ''}{entry.amount.toFixed(2)}
                             </span>
                           </TableCell>
-                          <TableCell className="text-right font-medium">${entry.balanceAfter.toFixed(2)}</TableCell>
+                          <TableCell className="text-right font-medium">৳{entry.balanceAfter.toFixed(2)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -648,11 +648,11 @@ export function AdminUsers() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground uppercase tracking-wider">Current Balance</p>
-                  <p className="text-sm font-semibold text-emerald-400">${balanceUser.balance.toFixed(2)}</p>
+                  <p className="text-sm font-semibold text-emerald-400">৳{balanceUser.balance.toFixed(2)}</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground uppercase tracking-wider">Previous Balance</p>
-                  <p className="text-sm font-medium">${getPreviousBalance().toFixed(2)}</p>
+                  <p className="text-sm font-medium">৳{getPreviousBalance().toFixed(2)}</p>
                 </div>
               </div>
               <div className="space-y-2">

@@ -333,7 +333,7 @@ export function AdminSubscriptions() {
                   <TableCell><SubStatusBadge status={sub.status} /></TableCell>
                   <TableCell className="text-muted-foreground text-sm">{sub.startDate}</TableCell>
                   <TableCell className="text-muted-foreground text-sm">{sub.expiryDate}</TableCell>
-                  <TableCell className="font-medium">${sub.price.toFixed(2)}</TableCell>
+                  <TableCell className="font-medium">৳{sub.price.toFixed(2)}</TableCell>
                   <TableCell className="min-w-[180px]">
                     <div className="space-y-1">
                       <div className="flex items-center justify-between text-xs">
@@ -536,7 +536,7 @@ export function AdminSubscriptions() {
                                 )}
                               </div>
                             </TableCell>
-                            <TableCell className="font-medium">${item.price.toFixed(2)}</TableCell>
+                            <TableCell className="font-medium">৳{item.price.toFixed(2)}</TableCell>
                             <TableCell className="text-right">
                               <div className="flex items-center justify-end gap-1">
                                 <Button
@@ -609,7 +609,7 @@ export function AdminSubscriptions() {
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground uppercase tracking-wider">Price</p>
-                  <p className="text-sm font-semibold text-emerald-400">${viewSub.price.toFixed(2)}</p>
+                  <p className="text-sm font-semibold text-emerald-400">৳{viewSub.price.toFixed(2)}</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground uppercase tracking-wider">Start Date</p>
