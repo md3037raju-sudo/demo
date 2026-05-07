@@ -1,14 +1,13 @@
 import { create } from 'zustand'
 import {
   fetchTable,
+  fetchOne,
   updateRow,
-  subscribeToTable,
   snakeToCamelObj,
   camelToSnakeObj,
 } from '@/lib/supabase-sync'
-import { getSupabaseBrowser as supabaseBrowser } from '@/lib/supabase-client'
 
-// ── Types (unchanged) ──
+// ── Types ──
 
 export type UserRole = 'user' | 'admin' | 'moderator'
 
@@ -41,7 +40,7 @@ interface AuthState {
   syncWithSupabase: () => Promise<void>
 }
 
-// ── Mock data (unchanged, used as fallback) ──
+// ── Mock data ──
 
 const mockUser: User = {
   id: 'usr_cx_001',
@@ -67,7 +66,7 @@ const mockAdmin: User = {
   role: 'admin',
 }
 
-// ── Converter functions: snake_case DB row → camelCase auth User ──
+// ── Converter: DB row → auth User ──
 
 function authUserFromDb(row: Record<string, unknown>): User {
   const camel = snakeToCamelObj<Record<string, unknown>>(row)
@@ -84,55 +83,27 @@ function authUserFromDb(row: Record<string, unknown>): User {
   }
 }
 
-// ── Table name constant ──
-
 const TABLE = 'users'
 
-// ── Simulates a backend check: is this OAuth account an admin? ──
-// For demo: Google account → admin (admin@corex.io is a Google account)
-// Telegram account → regular user
-
-function mockCheckAdmin(provider: 'google' | 'telegram'): UserRole {
-  if (provider === 'google') return 'admin'
-  return 'user'
-}
-
-// ── Helper: fetch user from Supabase by email ──
+// ── Helper: fetch user from API by email ──
 
 async function fetchUserByEmail(email: string): Promise<User | null> {
   try {
-    const { data, error } = await supabaseBrowser()
-      .from(TABLE)
-      .select('*')
-      .eq('email', email)
-      .limit(1)
-      .single()
-
-    if (error || !data) return null
-
-    return authUserFromDb(data as Record<string, unknown>)
+    const params = new URLSearchParams({ table: TABLE, email, limit: '1' })
+    const res = await fetch(`/api/supabase?${params}`)
+    if (!res.ok) return null
+    const result = await res.json()
+    if (!result.data?.[0]) return null
+    return authUserFromDb(result.data[0])
   } catch {
     return null
   }
 }
 
-// ── Helper: fetch user from Supabase by id ──
+// ── Helper: fetch user from API by id ──
 
 async function fetchUserById(id: string): Promise<User | null> {
-  try {
-    const { data, error } = await supabaseBrowser()
-      .from(TABLE)
-      .select('*')
-      .eq('id', id)
-      .limit(1)
-      .single()
-
-    if (error || !data) return null
-
-    return authUserFromDb(data as Record<string, unknown>)
-  } catch {
-    return null
-  }
+  return fetchOne<User>(TABLE, id, authUserFromDb)
 }
 
 // ── Helper: apply pending balance from userBalanceMap ──
@@ -149,10 +120,6 @@ function applyPendingBalance(user: User, map: Record<string, number>): {
   return { user, updatedMap: map }
 }
 
-// ── Real-time subscription channel reference ──
-
-let realtimeChannel: ReturnType<typeof subscribeToTable<User>> | null = null
-
 // ── Store ──
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -161,17 +128,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   userBalanceMap: {},
   isSupabaseConnected: false,
 
-  // ── Sync with Supabase ──
-
   syncWithSupabase: async () => {
     try {
-      // Try to fetch users table to check connection
       const data = await fetchTable<User>(TABLE, authUserFromDb, 'created_at', false)
 
-      if (data.length > 0 || data.length === 0) {
-        // If fetchTable didn't throw, we're connected
-        set({ isSupabaseConnected: true })
-      }
+      // If fetchTable didn't throw, we're connected
+      set({ isSupabaseConnected: true })
 
       // If a user is already logged in, refresh their data from Supabase
       const currentUser = get().user
@@ -183,64 +145,34 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           set({ user: updatedUser, userBalanceMap: updatedMap })
         }
       }
-
-      // Subscribe to real-time changes after successful fetch
-      if (!realtimeChannel) {
-        realtimeChannel = subscribeToTable<User>(
-          TABLE,
-          {
-            onInsert: () => {
-              // Not relevant for auth store — we don't maintain a user list
-            },
-            onUpdate: (item) => {
-              // If the updated user is the currently logged-in user, update their state
-              const currentUser = get().user
-              if (currentUser && currentUser.id === item.id) {
-                set({ user: item })
-              }
-            },
-            onDelete: () => {
-              // Not relevant for auth store
-            },
-          },
-          authUserFromDb
-        )
-      }
     } catch (err) {
       console.warn('[AUTH-STORE] Supabase sync failed:', err)
       set({ isSupabaseConnected: false })
     }
   },
 
-  // ── Login methods ──
-
   login: (provider) => {
-    const role = mockCheckAdmin(provider)
+    const role = provider === 'google' ? 'admin' as UserRole : 'user' as UserRole
     const baseUser = role === 'admin' ? mockAdmin : mockUser
     const user = { ...baseUser, provider }
 
-    // Apply any pending balance that was recorded while this user was logged out
     const map = get().userBalanceMap
     const { user: updatedUser, updatedMap } = applyPendingBalance(user, map)
     set({ isAuthenticated: true, user: updatedUser, userBalanceMap: updatedMap })
 
-    // Background: try to fetch user from Supabase by email for real data
+    // Background: try to fetch user from Supabase for real data
     if (get().isSupabaseConnected) {
       fetchUserByEmail(user.email).then((supabaseUser) => {
         if (supabaseUser) {
-          // Re-apply with provider override from the login call
           const mergedUser = { ...supabaseUser, provider }
           const currentMap = get().userBalanceMap
           const { user: refreshedUser, updatedMap: refreshedMap } = applyPendingBalance(mergedUser, currentMap)
-          // Only update if the user is still the same one (hasn't logged out)
           const current = get().user
           if (current && current.id === supabaseUser.id && get().isAuthenticated) {
             set({ user: refreshedUser, userBalanceMap: refreshedMap })
           }
         }
-      }).catch(() => {
-        // Silently ignore — mock data is already set
-      })
+      }).catch(() => {})
     }
 
     return role
@@ -248,13 +180,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   loginAsAdmin: () => {
     const user = { ...mockAdmin }
-
-    // Apply any pending balance for admin
     const map = get().userBalanceMap
     const { user: updatedUser, updatedMap } = applyPendingBalance(user, map)
     set({ isAuthenticated: true, user: updatedUser, userBalanceMap: updatedMap })
 
-    // Background: try to fetch admin from Supabase by email for real data
     if (get().isSupabaseConnected) {
       fetchUserByEmail(mockAdmin.email).then((supabaseUser) => {
         if (supabaseUser) {
@@ -265,9 +194,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             set({ user: refreshedUser, userBalanceMap: refreshedMap })
           }
         }
-      }).catch(() => {
-        // Silently ignore — mock data is already set
-      })
+      }).catch(() => {})
     }
 
     return 'admin' as UserRole
@@ -276,15 +203,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   loginAsUser: () => {
     const currentUser = get().user
     if (currentUser && currentUser.role === 'admin') {
-      // Admin choosing to login as user — switch to mock user persona
       const user = { ...mockUser, provider: currentUser.provider }
-
-      // Apply any pending balance for this user
       const map = get().userBalanceMap
       const { user: updatedUser, updatedMap } = applyPendingBalance(user, map)
       set({ user: updatedUser, userBalanceMap: updatedMap })
 
-      // Background: try to fetch user from Supabase by email for real data
       if (get().isSupabaseConnected) {
         fetchUserByEmail(mockUser.email).then((supabaseUser) => {
           if (supabaseUser) {
@@ -296,18 +219,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               set({ user: refreshedUser, userBalanceMap: refreshedMap })
             }
           }
-        }).catch(() => {
-          // Silently ignore — mock data is already set
-        })
+        }).catch(() => {})
       }
     }
   },
 
   logout: () => {
-    set({
-      isAuthenticated: false,
-      user: null,
-    })
+    set({ isAuthenticated: false, user: null })
   },
 
   deductBalance: (amount: number) => {
@@ -316,113 +234,84 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const newBalance = user.balance - amount
       set({ user: { ...user, balance: newBalance } })
 
-      // Push balance update to Supabase in background
       if (get().isSupabaseConnected) {
         updateRow(TABLE, user.id, { balance: newBalance }, (data) =>
           camelToSnakeObj(data as Record<string, unknown>)
-        ).catch((err) => {
-          console.warn('[AUTH-STORE] Failed to push deductBalance to Supabase:', err)
-        })
+        ).catch(() => {})
       }
     }
   },
 
   addBalance: (userId: string, amount: number) => {
-    // Always record the balance change in the map so any user gets it on login
-    const map = get().userBalanceMap
-    const updatedMap = { ...map, [userId]: (map[userId] ?? 0) + amount }
-
     const user = get().user
     if (user && user.id === userId) {
-      // Current user matches — update their balance in real-time too
+      // Apply directly to the currently logged-in user.
+      // Remove any pending map entry for this user to avoid double-counting
+      // on re-login (Supabase already has the updated balance).
       const newBalance = user.balance + amount
-      set({
-        user: { ...user, balance: newBalance },
-        userBalanceMap: updatedMap,
-      })
+      const { [userId]: _, ...restMap } = get().userBalanceMap
+      set({ user: { ...user, balance: newBalance }, userBalanceMap: restMap })
 
-      // Push balance update to Supabase in background
       if (get().isSupabaseConnected) {
         updateRow(TABLE, userId, { balance: newBalance }, (data) =>
           camelToSnakeObj(data as Record<string, unknown>)
-        ).catch((err) => {
-          console.warn('[AUTH-STORE] Failed to push addBalance to Supabase:', err)
-        })
+        ).catch(() => {})
       }
     } else {
-      // Different user (e.g. admin approving payment for another user)
-      // Just record in the map; the target user will get it on next login
+      // User is not currently logged in — store the delta in the map
+      // so it can be applied when they next log in.
+      const map = get().userBalanceMap
+      const updatedMap = { ...map, [userId]: (map[userId] ?? 0) + amount }
       set({ userBalanceMap: updatedMap })
 
-      // Push balance update to Supabase in background
-      // We need to compute the new balance from Supabase data
       if (get().isSupabaseConnected) {
         fetchUserById(userId).then((supabaseUser) => {
           if (supabaseUser) {
             const newBalance = supabaseUser.balance + amount
             updateRow(TABLE, userId, { balance: newBalance }, (data) =>
               camelToSnakeObj(data as Record<string, unknown>)
-            ).catch((err) => {
-              console.warn('[AUTH-STORE] Failed to push addBalance (other user) to Supabase:', err)
-            })
+            ).catch(() => {})
           }
-        }).catch(() => {
-          // Silently ignore
-        })
+        }).catch(() => {})
       }
     }
   },
 }))
 
-// ── Standalone function for use by other stores (e.g. payment-store) ──
+// ── Standalone function for use by other stores ──
 
 export function addBalanceToUser(userId: string, amount: number) {
   const state = useAuthStore.getState()
-
-  // Always record the balance change in the map
-  const updatedMap = {
-    ...state.userBalanceMap,
-    [userId]: (state.userBalanceMap[userId] ?? 0) + amount,
-  }
-
   const user = state.user
-  if (user && user.id === userId) {
-    // Current user matches — update their balance in real-time too
-    const newBalance = user.balance + amount
-    useAuthStore.setState({
-      user: { ...user, balance: newBalance },
-      userBalanceMap: updatedMap,
-    })
 
-    // Push balance update to Supabase in background
+  if (user && user.id === userId) {
+    // Apply directly to the currently logged-in user.
+    // Remove any pending map entry for this user to avoid double-counting
+    // on re-login (Supabase already has the updated balance).
+    const newBalance = user.balance + amount
+    const { [userId]: _, ...restMap } = state.userBalanceMap
+    useAuthStore.setState({ user: { ...user, balance: newBalance }, userBalanceMap: restMap })
+
     if (useAuthStore.getState().isSupabaseConnected) {
       updateRow(TABLE, userId, { balance: newBalance }, (data) =>
         camelToSnakeObj(data as Record<string, unknown>)
-      ).catch((err) => {
-        console.warn('[AUTH-STORE] Failed to push addBalanceToUser to Supabase:', err)
-      })
+      ).catch(() => {})
     }
   } else {
-    // Different user — record in map only; applied on their next login
+    // User is not currently logged in — store the delta in the map
+    // so it can be applied when they next log in.
+    const updatedMap = { ...state.userBalanceMap, [userId]: (state.userBalanceMap[userId] ?? 0) + amount }
     useAuthStore.setState({ userBalanceMap: updatedMap })
 
-    // Push balance update to Supabase in background
     if (useAuthStore.getState().isSupabaseConnected) {
       fetchUserById(userId).then((supabaseUser) => {
         if (supabaseUser) {
           const newBalance = supabaseUser.balance + amount
           updateRow(TABLE, userId, { balance: newBalance }, (data) =>
             camelToSnakeObj(data as Record<string, unknown>)
-          ).catch((err) => {
-            console.warn('[AUTH-STORE] Failed to push addBalanceToUser (other user) to Supabase:', err)
-          })
+          ).catch(() => {})
         }
-      }).catch(() => {
-        // Silently ignore
-      })
+      }).catch(() => {})
     }
   }
 }
-
-// NOTE: Auto-sync removed — call syncAllStores() from the app to trigger sync
-// This prevents crashes from multiple concurrent Supabase connections on page load

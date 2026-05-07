@@ -25,7 +25,9 @@ import {
   Info,
   UserPlus,
   AlertCircle,
+  ShieldCheck,
 } from 'lucide-react'
+import { Admin2FASettings } from './admin-2fa-settings'
 
 // ── Telegram mini icon for admin UI ──
 function TelegramMini() {
@@ -510,6 +512,22 @@ export function AdminUtility() {
               Changes apply immediately for all users
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* ── 2FA Security Settings ── */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ShieldCheck className="size-5" />
+            Two-Factor Authentication
+          </CardTitle>
+          <CardDescription>
+            Manage 2FA security settings for admin account protection
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Admin2FASettings />
         </CardContent>
       </Card>
 

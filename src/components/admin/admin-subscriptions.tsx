@@ -88,7 +88,7 @@ function PlanTypeBadge({ plan }: { plan: string }) {
 }
 
 export function AdminSubscriptions() {
-  const { subscriptions, addSubscription, removeSubscription } = useSubscriptionStore()
+  const { subscriptions, addSubscription, removeSubscription, updateSubscription } = useSubscriptionStore()
   const [recycleBin, setRecycleBin] = useState<RecycleItem[]>([])
   const [activeTab, setActiveTab] = useState('active')
 
@@ -159,13 +159,10 @@ export function AdminSubscriptions() {
         toast.error('Please enter a valid bandwidth limit')
         return
       }
-      useSubscriptionStore.setState((state) => ({
-        subscriptions: state.subscriptions.map((s) =>
-          s.id === editSub.id
-            ? { ...s, expiryDate: editExpiry, bandwidthLimit: newBandwidth }
-            : s
-        ),
-      }))
+      updateSubscription(editSub.id, {
+        expiryDate: editExpiry,
+        bandwidthLimit: newBandwidth,
+      })
       toast.success(`Subscription ${editSub.name} updated`, {
         description: `Expiry: ${editExpiry}, Bandwidth: ${newBandwidth} GB`,
       })

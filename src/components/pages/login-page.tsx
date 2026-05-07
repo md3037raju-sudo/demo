@@ -82,8 +82,14 @@ export function LoginPage() {
     if (role === 'admin') {
       setAdminDialogOpen(true)
     } else {
-      // Show referral code dialog for regular users
-      setReferralDialogOpen(true)
+      // When registration is paused, skip the referral dialog for existing users
+      // and navigate directly to the dashboard. Referral codes are for new users.
+      if (!registrationEnabled) {
+        navigate('dashboard')
+      } else {
+        // Show referral code dialog for regular users
+        setReferralDialogOpen(true)
+      }
     }
   }
 

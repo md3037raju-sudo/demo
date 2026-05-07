@@ -66,6 +66,8 @@ interface SubscriptionState {
   renewSubscription: (subId: string, newExpiryDate: string) => void
   /** Extend = add duration to an active subscription (extends from current expiry) */
   extendSubscription: (subId: string, newExpiryDate: string, additionalPrice: number) => void
+  /** Update = generic update of subscription fields (expiry, bandwidth, etc.) */
+  updateSubscription: (subId: string, data: Partial<Subscription>) => void
   /** Remove subscription entirely (e.g. after 60-day window) */
   removeSubscription: (subId: string) => void
   /** Get active subscriptions */
@@ -254,6 +256,22 @@ export const useSubscriptionStore = create<SubscriptionState>((set, get) => ({
         price: current.price + additionalPrice,
       }, subscriptionToDb).catch((err) => {
         console.warn('[SUB-STORE] Failed to push extendSubscription to Supabase:', err)
+      })
+    }
+  },
+
+  updateSubscription: (subId, data) => {
+    // Update local state immediately
+    set((state) => ({
+      subscriptions: state.subscriptions.map((s) =>
+        s.id === subId ? { ...s, ...data } : s
+      ),
+    }))
+
+    // Push to Supabase in background
+    if (get().isSupabaseConnected) {
+      updateRow(TABLE, subId, data, subscriptionToDb).catch((err) => {
+        console.warn('[SUB-STORE] Failed to push updateSubscription to Supabase:', err)
       })
     }
   },

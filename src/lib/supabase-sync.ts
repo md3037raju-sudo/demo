@@ -1,16 +1,13 @@
 /**
- * CoreX — Supabase Sync Layer (Crash-Proof)
+ * CoreX — Supabase Sync Layer (API-Only, No Client-Side Supabase Import)
  *
- * Provides utilities for Zustand stores to:
- * 1. Fetch initial data from Supabase
- * 2. Subscribe to real-time changes (with graceful fallback)
- * 3. Push local changes to Supabase via API routes
+ * IMPORTANT: This module MUST NOT import @supabase/supabase-js.
+ * All database operations go through Next.js API routes via fetch().
+ * This prevents Turbopack crashes from bundling the Supabase JS client.
  *
- * All operations are wrapped in try/catch to prevent crashes.
- * If Supabase is not configured, all operations fail gracefully.
+ * Real-time subscriptions are NOT supported client-side.
+ * If you need real-time, use a WebSocket mini-service instead.
  */
-
-import { getSupabaseBrowser } from './supabase-client'
 
 // ── Types ──
 
@@ -55,7 +52,7 @@ export function camelToSnakeObj(obj: Record<string, unknown>): Record<string, un
   return result
 }
 
-// ── Fetch all rows from a table ──
+// ── Fetch all rows from a table (via API route) ──
 
 export async function fetchTable<T>(
   table: string,
@@ -64,20 +61,26 @@ export async function fetchTable<T>(
   ascending: boolean = false
 ): Promise<T[]> {
   try {
-    const client = getSupabaseBrowser()
-    const { data, error } = await client
-      .from(table)
-      .select('*')
-      .order(orderBy, { ascending })
+    const params = new URLSearchParams({
+      table,
+      order: orderBy,
+      ascending: String(ascending),
+    })
 
-    if (error) {
-      console.warn(`[SYNC] Failed to fetch ${table}:`, error.message)
+    const res = await fetch(`/api/supabase?${params}`)
+
+    if (!res.ok) {
+      console.warn(`[SYNC] Failed to fetch ${table}: HTTP ${res.status}`)
       return []
     }
 
-    if (!data) return []
+    const result = await res.json()
 
-    return data.map((row) => fromDb ? fromDb(row) : snakeToCamelObj<T>(row))
+    if (!result.data || !Array.isArray(result.data)) return []
+
+    return result.data.map((row: Record<string, unknown>) =>
+      fromDb ? fromDb(row) : snakeToCamelObj<T>(row)
+    )
   } catch (err) {
     console.warn(`[SYNC] Exception fetching ${table}:`, err)
     return []
@@ -92,16 +95,22 @@ export async function fetchOne<T>(
   fromDb?: (row: Record<string, unknown>) => T
 ): Promise<T | null> {
   try {
-    const client = getSupabaseBrowser()
-    const { data, error } = await client
-      .from(table)
-      .select('*')
-      .eq('id', id)
-      .single()
+    const params = new URLSearchParams({
+      table,
+      id,
+      limit: '1',
+    })
 
-    if (error || !data) return null
+    const res = await fetch(`/api/supabase?${params}`)
 
-    return fromDb ? fromDb(data) : snakeToCamelObj<T>(data)
+    if (!res.ok) return null
+
+    const result = await res.json()
+
+    if (!result.data || !Array.isArray(result.data) || result.data.length === 0) return null
+
+    const row = result.data[0]
+    return fromDb ? fromDb(row) : snakeToCamelObj<T>(row)
   } catch {
     return null
   }
@@ -114,16 +123,21 @@ export async function fetchConfig<T>(
   fromDb?: (row: Record<string, unknown>) => T
 ): Promise<T | null> {
   try {
-    const client = getSupabaseBrowser()
-    const { data, error } = await client
-      .from(table)
-      .select('*')
-      .limit(1)
-      .single()
+    const params = new URLSearchParams({
+      table,
+      limit: '1',
+    })
 
-    if (error || !data) return null
+    const res = await fetch(`/api/supabase?${params}`)
 
-    return fromDb ? fromDb(data) : snakeToCamelObj<T>(data)
+    if (!res.ok) return null
+
+    const result = await res.json()
+
+    if (!result.data || !Array.isArray(result.data) || result.data.length === 0) return null
+
+    const row = result.data[0]
+    return fromDb ? fromDb(row) : snakeToCamelObj<T>(row)
   } catch {
     return null
   }
@@ -211,96 +225,30 @@ export async function deleteRows(
   }
 }
 
-// ── Subscribe to real-time changes (CRASH-PROOF) ──
-//
-// This is the most dangerous part — WebSocket/realtime connections can crash
-// the entire Next.js process. We wrap EVERYTHING in try/catch and use
-// setTimeout to prevent synchronous errors from bubbling up.
-
-let _activeChannels: unknown[] = []
+// ── Real-time subscription stubs (NO-OP on client side) ──
+// Real-time requires WebSocket connection which would need @supabase/supabase-js.
+// To keep the app crash-proof, we stub these out.
+// If you need real-time, implement it via a WebSocket mini-service.
 
 export function subscribeToTable<T>(
-  table: string,
-  callbacks: {
+  _table: string,
+  _callbacks: {
     onInsert?: (item: T) => void
     onUpdate?: (item: T) => void
     onDelete?: (id: string) => void
   },
-  fromDb?: (row: Record<string, unknown>) => T
-  // Return type is Supabase RealtimeChannel or null
-): ReturnType<typeof getSupabaseBrowser>['channel'] | null {
-  try {
-    const client = getSupabaseBrowser()
-
-    const channel = client
-      .channel(`${table}-changes`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table },
-        (payload) => {
-          try {
-            const { eventType, new: newRow, old } = payload
-
-            if (eventType === 'INSERT' && callbacks.onInsert && newRow) {
-              const item = fromDb ? fromDb(newRow as Record<string, unknown>) : snakeToCamelObj<T>(newRow as Record<string, unknown>)
-              callbacks.onInsert(item)
-            }
-
-            if (eventType === 'UPDATE' && callbacks.onUpdate && newRow) {
-              const item = fromDb ? fromDb(newRow as Record<string, unknown>) : snakeToCamelObj<T>(newRow as Record<string, unknown>)
-              callbacks.onUpdate(item)
-            }
-
-            if (eventType === 'DELETE' && callbacks.onDelete && old) {
-              callbacks.onDelete((old as Record<string, unknown>).id as string)
-            }
-          } catch (err) {
-            console.warn(`[SYNC] Error in ${table} realtime callback:`, err)
-          }
-        }
-      )
-      .subscribe((status: string) => {
-        // Log but never crash on subscription status changes
-        console.log(`[SYNC] ${table} channel status:`, status)
-      })
-
-    _activeChannels.push(channel)
-    return channel
-  } catch (err) {
-    console.warn(`[SYNC] Failed to subscribe to ${table}:`, err)
-    return null
-  }
+  _fromDb?: (row: Record<string, unknown>) => T
+): null {
+  // No-op: real-time not supported on client side
+  return null
 }
 
-// ── Unsubscribe ──
-
-export async function unsubscribeChannel(channel: any) {
-  try {
-    if (!channel) return
-    const client = getSupabaseBrowser()
-    await client.removeChannel(channel)
-    _activeChannels = _activeChannels.filter((c) => c !== channel)
-  } catch (err) {
-    console.warn('[SYNC] Failed to unsubscribe channel:', err)
-  }
+export async function unsubscribeChannel(_channel: unknown): Promise<void> {
+  // No-op
 }
 
-// ── Unsubscribe all channels (for cleanup) ──
-
-export async function unsubscribeAllChannels() {
-  try {
-    const client = getSupabaseBrowser()
-    for (const channel of _activeChannels) {
-      try {
-        await client.removeChannel(channel)
-      } catch {
-        // ignore
-      }
-    }
-    _activeChannels = []
-  } catch (err) {
-    console.warn('[SYNC] Failed to unsubscribe all channels:', err)
-  }
+export async function unsubscribeAllChannels(): Promise<void> {
+  // No-op
 }
 
 // ── Check Supabase connection ──

@@ -36,6 +36,11 @@ export async function GET(req: NextRequest) {
       query = query.eq('user_id', userId)
     }
 
+    const email = searchParams.get('email')
+    if (email) {
+      query = query.eq('email', email)
+    }
+
     const status = searchParams.get('status')
     if (status) {
       query = query.eq('status', status)
