@@ -101,7 +101,7 @@ const defaultForm: PlanForm = {
   duration: '30d',
   basePrice: 0,
   devicePricing: { ...defaultDevicePricing },
-  proxyPresetId: 'none',
+  proxyPresetId: 'auto',
   features: '',
   isFeatured: false,
   isActive: true,
@@ -239,7 +239,7 @@ export function AdminPlans() {
       duration: plan.duration,
       basePrice: plan.basePrice,
       devicePricing: { ...plan.devicePricing },
-      proxyPresetId: plan.proxyPresetId ?? 'none',
+      proxyPresetId: plan.proxyPresetId ?? 'auto',
       features: plan.features.join(', '),
       isFeatured: plan.isFeatured,
       isActive: plan.isActive,
@@ -294,7 +294,7 @@ export function AdminPlans() {
                 duration: planForm.duration,
                 basePrice: planForm.basePrice,
                 devicePricing: { ...planForm.devicePricing },
-                proxyPresetId: planForm.proxyPresetId === 'none' ? null : planForm.proxyPresetId,
+                proxyPresetId: planForm.proxyPresetId === 'none' ? null : planForm.proxyPresetId === 'auto' ? 'auto' : planForm.proxyPresetId,
                 features: featuresList,
                 isFeatured: planForm.isFeatured,
                 isActive: planForm.isActive,
@@ -318,7 +318,7 @@ export function AdminPlans() {
         isActive: planForm.isActive,
         isFeatured: planForm.isFeatured,
         subscribers: 0,
-        proxyPresetId: planForm.proxyPresetId === 'none' ? null : planForm.proxyPresetId,
+        proxyPresetId: planForm.proxyPresetId === 'none' ? null : planForm.proxyPresetId === 'auto' ? 'auto' : planForm.proxyPresetId,
         features: featuresList,
         createdAt: new Date().toISOString().split('T')[0],
       }
@@ -596,7 +596,7 @@ export function AdminPlans() {
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {filteredPlans.map((plan) => {
           const isSelected = selectedIds.has(plan.id)
-          const presetName = plan.proxyPresetId
+          const presetName = plan.proxyPresetId && plan.proxyPresetId !== 'auto'
             ? mockProxyPresets.find((p) => p.id === plan.proxyPresetId)?.name ?? 'Unknown'
             : null
 
@@ -711,7 +711,12 @@ export function AdminPlans() {
                     <span>Bandwidth: <span className="font-medium">{plan.bandwidthLimit}</span></span>
                   </div>
                   <div className="flex items-center gap-2 text-sm">
-                    {presetName ? (
+                    {plan.proxyPresetId === 'auto' ? (
+                      <>
+                        <Sparkles className="size-3.5 text-primary shrink-0" />
+                        <span>Preset: <span className="font-medium text-primary">Auto-assign</span></span>
+                      </>
+                    ) : presetName ? (
                       <>
                         <Wifi className="size-3.5 text-emerald-500 shrink-0" />
                         <span>Preset: <span className="font-medium">{presetName}</span></span>
@@ -1022,6 +1027,7 @@ export function AdminPlans() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="auto">Auto (System assigns best preset)</SelectItem>
                   <SelectItem value="none">None (No preset)</SelectItem>
                   {mockProxyPresets.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
@@ -1030,6 +1036,17 @@ export function AdminPlans() {
                   ))}
                 </SelectContent>
               </Select>
+              {planForm.proxyPresetId === 'auto' && (
+                <div className="flex items-start gap-2 rounded-lg border border-primary/30 bg-primary/10 p-3 mt-1">
+                  <Sparkles className="size-4 text-primary shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-primary">Auto-assign Preset</p>
+                    <p className="text-xs text-muted-foreground">
+                      The system will automatically assign the best proxy preset to each user based on their location and load balancing. Users won&apos;t see any preset details — they&apos;ll just get connected automatically.
+                    </p>
+                  </div>
+                </div>
+              )}
               {planForm.proxyPresetId === 'none' && (
                 <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 mt-1">
                   <AlertTriangle className="size-4 text-amber-500 shrink-0 mt-0.5" />
@@ -1038,31 +1055,27 @@ export function AdminPlans() {
                     <p className="text-xs text-muted-foreground">
                       Users who subscribe to this plan will <span className="font-medium text-amber-600 dark:text-amber-400">not be assigned to any proxy group or nodes</span>.
                       They will need manual configuration or will receive default/generic proxies.
-                      It&apos;s recommended to assign a preset for a better user experience.
+                      It&apos;s recommended to assign a preset or use Auto for a better user experience.
                     </p>
                   </div>
                 </div>
               )}
-              {planForm.proxyPresetId !== 'none' && (() => {
-                const preset = mockProxyPresets.find((p) => p.id === planForm.proxyPresetId)
-                if (!preset) return null
-                return (
-                  <div className="flex items-start gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 mt-1">
-                    <Wifi className="size-4 text-emerald-500 shrink-0 mt-0.5" />
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">{preset.name}</p>
-                      <p className="text-xs text-muted-foreground">{preset.description}</p>
-                      <div className="flex flex-wrap gap-1.5 pt-1">
-                        {preset.subgroups.map((sg) => (
-                          <Badge key={sg.id} variant="secondary" className="text-[10px]">
-                            {sg.name} ({sg.proxyIds.length} prox{sg.proxyIds.length !== 1 ? 'ies' : 'y'})
-                          </Badge>
-                        ))}
-                      </div>
+              {planForm.proxyPresetId !== 'none' && planForm.proxyPresetId !== 'auto' && mockProxyPresets.find((p) => p.id === planForm.proxyPresetId) && (
+                <div className="flex items-start gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 mt-1">
+                  <Wifi className="size-4 text-emerald-500 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">{mockProxyPresets.find((p) => p.id === planForm.proxyPresetId)?.name}</p>
+                    <p className="text-xs text-muted-foreground">{mockProxyPresets.find((p) => p.id === planForm.proxyPresetId)?.description} — Admin-only info, users will not see the preset name.</p>
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {mockProxyPresets.find((p) => p.id === planForm.proxyPresetId)?.subgroups.map((sg) => (
+                        <Badge key={sg.id} variant="secondary" className="text-[10px]">
+                          {sg.name} ({sg.proxyIds.length} prox{sg.proxyIds.length !== 1 ? 'ies' : 'y'})
+                        </Badge>
+                      ))}
                     </div>
                   </div>
-                )
-              })()}
+                </div>
+              )}
             </div>
 
             {/* Features */}

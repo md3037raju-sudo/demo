@@ -288,7 +288,7 @@ export interface Plan {
   isActive: boolean
   isFeatured: boolean  // featured/recommended plan
   subscribers: number
-  proxyPresetId: string | null  // assigned proxy preset
+  proxyPresetId: string | null  // 'auto' = system auto-assigns, null = none, or specific preset ID
   features: string[]  // list of feature strings
   createdAt: string
 }
@@ -349,7 +349,7 @@ export const mockPlans: Plan[] = [
     isActive: true,
     isFeatured: false,
     subscribers: 45,
-    proxyPresetId: 'preset_001',
+    proxyPresetId: 'auto',
     features: ['Limited bandwidth', 'BD & Asia nodes', 'Basic support'],
     createdAt: '2024-11-01',
   },
@@ -367,7 +367,7 @@ export const mockPlans: Plan[] = [
     isActive: true,
     isFeatured: true,
     subscribers: 156,
-    proxyPresetId: 'preset_001',
+    proxyPresetId: 'auto',
     features: ['200 GB bandwidth', 'All Asian nodes', 'Priority support', 'Load-balanced'],
     createdAt: '2024-11-01',
   },
@@ -385,7 +385,7 @@ export const mockPlans: Plan[] = [
     isActive: true,
     isFeatured: false,
     subscribers: 98,
-    proxyPresetId: 'preset_002',
+    proxyPresetId: 'auto',
     features: ['Unlimited bandwidth', 'All global nodes', '24/7 support', 'Load-balanced', 'Priority servers'],
     createdAt: '2024-11-01',
   },
@@ -403,7 +403,7 @@ export const mockPlans: Plan[] = [
     isActive: true,
     isFeatured: false,
     subscribers: 210,
-    proxyPresetId: 'preset_001',
+    proxyPresetId: 'auto',
     features: ['10 GB bandwidth', 'BD nodes only', 'Quick trial'],
     createdAt: '2024-12-15',
   },
@@ -421,7 +421,7 @@ export const mockPlans: Plan[] = [
     isActive: true,
     isFeatured: false,
     subscribers: 72,
-    proxyPresetId: 'preset_002',
+    proxyPresetId: 'auto',
     features: ['50 GB bandwidth', 'All Asian nodes', 'Priority support'],
     createdAt: '2025-01-10',
   },
@@ -439,7 +439,7 @@ export const mockPlans: Plan[] = [
     isActive: true,
     isFeatured: true,
     subscribers: 32,
-    proxyPresetId: 'preset_003',
+    proxyPresetId: 'auto',
     features: ['Unlimited everything', 'All global nodes', '24/7 VIP support', 'Exclusive servers', '2 months free'],
     createdAt: '2024-11-01',
   },
@@ -457,7 +457,7 @@ export const mockPlans: Plan[] = [
     isActive: true,
     isFeatured: false,
     subscribers: 28,
-    proxyPresetId: 'preset_003',
+    proxyPresetId: 'auto',
     features: ['Unlimited bandwidth', 'All nodes', 'Priority support', '1 month free'],
     createdAt: '2025-01-01',
   },
