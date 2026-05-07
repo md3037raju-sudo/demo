@@ -14,7 +14,7 @@ export function DownloadPage() {
 
   if (!isAuthenticated) {
     return (
-      <div className="dark min-h-screen flex flex-col bg-background text-foreground">
+      <div className="min-h-screen flex flex-col bg-background text-foreground">
         <header className="border-b border-border bg-card/50 backdrop-blur-sm">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -50,7 +50,7 @@ export function DownloadPage() {
   }
 
   return (
-    <div className="dark min-h-screen flex flex-col bg-background text-foreground">
+    <div className="min-h-screen flex flex-col bg-background text-foreground">
       {/* Top Bar */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">

@@ -35,6 +35,7 @@ import {
   Shield,
   Palette,
 } from 'lucide-react'
+import { ThemeToggle } from '@/components/shared/theme-toggle'
 import { OverviewPage } from './overview-page'
 import { SubscriptionsPage } from './subscriptions-page'
 import { ActiveDevicesPage } from './active-devices-page'
@@ -255,7 +256,7 @@ export function DashboardLayout() {
   }
 
   return (
-    <div className="dark flex h-screen overflow-hidden">
+    <div className="flex h-screen overflow-hidden">
       {/* Desktop Sidebar */}
       {!isMobile && (
         <aside className="hidden md:flex w-64 shrink-0 border-r border-sidebar-border flex-col">
@@ -286,6 +287,7 @@ export function DashboardLayout() {
           <h1 className="text-lg font-semibold">{getPageTitle(currentPage)}</h1>
 
           <div className="ml-auto flex items-center gap-2">
+            <ThemeToggle />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative size-9 rounded-full">

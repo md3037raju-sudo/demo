@@ -35,6 +35,7 @@ import {
   Zap,
   Globe,
 } from 'lucide-react'
+import { ThemeToggle } from '@/components/shared/theme-toggle'
 
 export function LandingPage() {
   const navigate = useNavigationStore((s) => s.navigate)
@@ -56,7 +57,7 @@ export function LandingPage() {
   }
 
   return (
-    <div className="dark min-h-screen flex flex-col bg-background text-foreground">
+    <div className="min-h-screen flex flex-col bg-background text-foreground">
       {/* ── Navbar ── */}
       <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
@@ -88,6 +89,7 @@ export function LandingPage() {
 
           {/* Desktop Actions */}
           <div className="hidden md:flex items-center gap-3">
+            <ThemeToggle />
             <Button
               variant="ghost"
               size="sm"
@@ -128,6 +130,11 @@ export function LandingPage() {
                     </Button>
                   </SheetClose>
                 ))}
+                <Separator className="my-2" />
+                <div className="flex items-center justify-between px-2">
+                  <span className="text-sm text-muted-foreground">Theme</span>
+                  <ThemeToggle />
+                </div>
                 <Separator className="my-2" />
                 <SheetClose asChild>
                   <Button

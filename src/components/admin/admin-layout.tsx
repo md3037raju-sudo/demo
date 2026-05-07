@@ -44,6 +44,7 @@ import {
   Ticket,
   ShieldCheck,
 } from 'lucide-react'
+import { ThemeToggle } from '@/components/shared/theme-toggle'
 import { AdminDashboard } from './admin-dashboard'
 import { AdminUsers } from './admin-users'
 import { AdminSubscriptions } from './admin-subscriptions'
@@ -332,7 +333,7 @@ export function AdminLayout() {
   }
 
   return (
-    <div className="dark flex h-screen overflow-hidden">
+    <div className="flex h-screen overflow-hidden">
       {/* Desktop Sidebar */}
       {!isMobile && (
         <aside className="hidden md:flex w-64 shrink-0 border-r border-sidebar-border flex-col">
@@ -364,6 +365,7 @@ export function AdminLayout() {
           <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-[10px]">Admin</Badge>
 
           <div className="ml-auto flex items-center gap-2">
+            <ThemeToggle />
             <TwoFAShieldIndicator />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

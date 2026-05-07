@@ -82,7 +82,7 @@ export function AboutPage() {
   const navigate = useNavigationStore((s) => s.navigate)
 
   return (
-    <div className="dark min-h-screen flex flex-col bg-background">
+    <div className="min-h-screen flex flex-col bg-background">
       <Navbar />
 
       <main className="flex-1">

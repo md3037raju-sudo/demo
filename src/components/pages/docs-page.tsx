@@ -272,7 +272,7 @@ export function DocsPage() {
 
   if (!isAuthenticated) {
     return (
-      <div className="dark min-h-screen flex items-center justify-center bg-background text-foreground">
+      <div className="min-h-screen flex items-center justify-center bg-background text-foreground">
         <p className="text-muted-foreground">Redirecting to login...</p>
       </div>
     )
@@ -281,7 +281,7 @@ export function DocsPage() {
   const currentSection = docSections.find((s) => s.id === activeSection) ?? docSections[0]
 
   return (
-    <div className="dark min-h-screen flex flex-col bg-background text-foreground">
+    <div className="min-h-screen flex flex-col bg-background text-foreground">
       {/* Top Bar */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">

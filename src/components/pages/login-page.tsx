@@ -163,7 +163,7 @@ export function LoginPage() {
   }
 
   return (
-    <div className="dark min-h-screen flex flex-col items-center justify-center bg-background px-4 py-8">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background px-4 py-8">
       {/* Back to landing */}
       <button
         onClick={() => navigate('landing')}
