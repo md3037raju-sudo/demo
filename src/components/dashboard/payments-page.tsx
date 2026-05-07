@@ -142,7 +142,11 @@ export function PaymentsPage() {
       return
     }
 
-    submitBalanceRequest(userId, user?.name ?? '', numAmount, selectedMethod, trxId.trim())
+    const result = submitBalanceRequest(userId, user?.name ?? '', numAmount, selectedMethod, trxId.trim())
+    if (!result) {
+      toast.error('This Transaction ID has already been used and approved. Please use a new TrxID.')
+      return
+    }
     toast.success('Balance request submitted!', {
       description: 'Admin will review and approve your payment.',
     })

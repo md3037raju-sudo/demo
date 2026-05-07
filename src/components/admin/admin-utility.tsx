@@ -23,6 +23,8 @@ import {
   Link2,
   MessageCircle,
   Info,
+  UserPlus,
+  AlertCircle,
 } from 'lucide-react'
 
 // ── Telegram mini icon for admin UI ──
@@ -63,6 +65,7 @@ export function AdminUtility() {
   const [changelog, setChangelog] = useState(config.appChangelog)
   const [telegramLink, setTelegramLink] = useState(config.telegramLink)
   const [facebookLink, setFacebookLink] = useState(config.facebookLink)
+  const [registrationEnabled, setRegistrationEnabled] = useState(config.registrationEnabled)
 
   // Local state for editing — Payment config
   const [bkashNumber, setBkashNumber] = useState(paymentConfig.bkashNumber)
@@ -79,6 +82,7 @@ export function AdminUtility() {
     setChangelog(config.appChangelog)
     setTelegramLink(config.telegramLink)
     setFacebookLink(config.facebookLink)
+    setRegistrationEnabled(config.registrationEnabled)
   }, [config])
 
   useEffect(() => {
@@ -108,6 +112,13 @@ export function AdminUtility() {
     })
     toast.success('Social links saved!', {
       description: 'Telegram & Facebook links updated for users.',
+    })
+  }
+
+  const handleSaveRegistrationConfig = () => {
+    updateConfig({ registrationEnabled })
+    toast.success('Registration setting saved!', {
+      description: registrationEnabled ? 'New users can register.' : 'New registration is currently paused.',
     })
   }
 
@@ -330,6 +341,62 @@ export function AdminUtility() {
             <Button onClick={handleSaveSocialConfig} className="gap-1.5">
               <Save className="size-4" />
               Save Social Links
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ── Registration Control ── */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <UserPlus className="size-5" />
+            Registration Control
+          </CardTitle>
+          <CardDescription>
+            Enable or disable new user registration
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="rounded-lg border p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <h3 className="text-sm font-semibold">New Registration</h3>
+                <p className="text-xs text-muted-foreground">
+                  {registrationEnabled
+                    ? 'Users can create new accounts'
+                    : 'New registration is currently paused'}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                {registrationEnabled ? (
+                  <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20">Active</Badge>
+                ) : (
+                  <Badge className="bg-red-500/20 text-red-400 border-red-500/30 hover:bg-red-500/20">Paused</Badge>
+                )}
+                <Button
+                  variant={registrationEnabled ? 'destructive' : 'default'}
+                  size="sm"
+                  onClick={() => setRegistrationEnabled(!registrationEnabled)}
+                >
+                  {registrationEnabled ? 'Disable Registration' : 'Enable Registration'}
+                </Button>
+              </div>
+            </div>
+            {!registrationEnabled && (
+              <div className="flex items-start gap-2 rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-2">
+                <AlertCircle className="size-4 text-red-400 mt-0.5 shrink-0" />
+                <p className="text-xs text-red-400">
+                  Users attempting to register will see a message that registration is temporarily paused.
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3 pt-2">
+            <Button onClick={handleSaveRegistrationConfig} className="gap-1.5">
+              <Save className="size-4" />
+              Save Registration Setting
             </Button>
           </div>
         </CardContent>

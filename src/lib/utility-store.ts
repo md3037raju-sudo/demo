@@ -8,6 +8,7 @@ export interface UtilityConfig {
   appChangelog: string
   telegramLink: string
   facebookLink: string
+  registrationEnabled: boolean
 }
 
 interface UtilityState {
@@ -24,6 +25,7 @@ export const useUtilityStore = create<UtilityState>((set) => ({
     appChangelog: '• Fixed connection stability\n• Added WireGuard protocol\n• Improved load balancing\n• Dark mode improvements',
     telegramLink: 'Coming Soon',
     facebookLink: 'Coming Soon',
+    registrationEnabled: true,
   },
 
   updateConfig: (partial) => {

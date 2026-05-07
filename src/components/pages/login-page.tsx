@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Shield, ArrowLeft, KeyRound, UserCog, User, Lock, ArrowRight, Gift, SkipForward } from 'lucide-react'
+import { Shield, ArrowLeft, KeyRound, UserCog, User, Lock, ArrowRight, Gift, SkipForward, AlertTriangle } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -20,6 +20,7 @@ import { useNavigationStore } from '@/lib/navigation-store'
 import { useAuthStore } from '@/lib/auth-store'
 import { use2FAStore } from '@/lib/2fa-store'
 import { useReferralStore } from '@/lib/referral-store'
+import { useUtilityStore } from '@/lib/utility-store'
 import { AnimateIn } from '@/components/shared/animate-in'
 import { CoreXLogo } from '@/components/shared/corex-logo'
 
@@ -61,6 +62,7 @@ export function LoginPage() {
   const loginAsUser = useAuthStore((s) => s.loginAsUser)
   const { isEnabled: is2FAEnabled, isVerified: is2FAVerified, verifyCode: verify2FACode } = use2FAStore()
   const { applyReferralCode, settings } = useReferralStore()
+  const registrationEnabled = useUtilityStore((s) => s.config.registrationEnabled)
 
   const [adminDialogOpen, setAdminDialogOpen] = useState(false)
   const [twoFADialogOpen, setTwoFADialogOpen] = useState(false)
@@ -197,6 +199,17 @@ export function LoginPage() {
         <CardContent className="space-y-5">
           <Separator className="opacity-50" />
 
+          {/* Registration Paused Banner */}
+          {!registrationEnabled && (
+            <div className="flex items-center gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-amber-600 dark:text-amber-400">
+              <AlertTriangle className="size-5 shrink-0" />
+              <div>
+                <p className="font-semibold text-sm">Registration Paused</p>
+                <p className="text-xs opacity-80 mt-0.5">New registration is temporarily paused. Please try again later.</p>
+              </div>
+            </div>
+          )}
+
           {/* Auth Buttons */}
           <div className="space-y-3">
             {/* Google Auth */}
@@ -205,6 +218,7 @@ export function LoginPage() {
               size="lg"
               className="w-full bg-white hover:bg-gray-50 text-gray-800 border-gray-300 hover:border-gray-400 dark:bg-white dark:hover:bg-gray-100 dark:text-gray-800 dark:border-gray-300 h-12 text-base font-medium"
               onClick={() => handleLogin('google')}
+              disabled={!registrationEnabled}
             >
               <GoogleIcon />
               Continue with Google
@@ -215,6 +229,7 @@ export function LoginPage() {
               size="lg"
               className="w-full bg-[#2AABEE] hover:bg-[#229ED9] text-white border-0 h-12 text-base font-medium shadow-md"
               onClick={() => handleLogin('telegram')}
+              disabled={!registrationEnabled}
             >
               <TelegramIcon />
               Continue with Telegram

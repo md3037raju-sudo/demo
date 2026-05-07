@@ -1,8 +1,8 @@
 'use client'
 
 import React, { useState } from 'react'
+import { useTicketStore, type TicketData, type TicketStatus, type TicketPriority } from '@/lib/ticket-store'
 import { toast } from 'sonner'
-import { mockTickets } from '@/lib/mock-data'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -46,79 +46,54 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Ticket, MoreHorizontal, MessageSquare, User } from 'lucide-react'
+import { Ticket, MoreHorizontal, MessageSquare, User, Trash2 } from 'lucide-react'
 
-interface TicketMessage {
-  id: string
-  sender: 'user' | 'admin'
-  name: string
-  content: string
-  timestamp: string
+function getPriorityBadge(priority: string) {
+  switch (priority) {
+    case 'high':
+      return <Badge variant="destructive">High</Badge>
+    case 'medium':
+      return <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">Medium</Badge>
+    case 'low':
+      return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">Low</Badge>
+    default:
+      return <Badge variant="secondary">{priority}</Badge>
+  }
 }
 
-interface TicketData {
-  id: string
-  userId: string
-  userName: string
-  subject: string
-  status: 'open' | 'in_progress' | 'closed'
-  priority: 'high' | 'medium' | 'low'
-  createdAt: string
-  lastUpdate: string
-  messages: number
-  conversation: TicketMessage[]
+function getStatusBadge(status: string) {
+  switch (status) {
+    case 'open':
+      return <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">Open</Badge>
+    case 'in_progress':
+      return <Badge className="bg-sky-500/20 text-sky-400 border-sky-500/30">In Progress</Badge>
+    case 'closed':
+      return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">Closed</Badge>
+    default:
+      return <Badge variant="secondary">{status}</Badge>
+  }
 }
-
-const initialTickets: TicketData[] = [
-  {
-    ...mockTickets[0],
-    conversation: [
-      { id: 'm1', sender: 'user', name: 'Mike Johnson', content: 'I cannot connect to the Dhaka proxy. It keeps timing out.', timestamp: '2025-02-10 10:00' },
-      { id: 'm2', sender: 'admin', name: 'Admin CoreX', content: 'We are looking into the Dhaka proxy issue. Can you share your connection logs?', timestamp: '2025-02-10 11:30' },
-      { id: 'm3', sender: 'user', name: 'Mike Johnson', content: 'Sure, I\'ve uploaded the logs. It shows timeout after 30 seconds.', timestamp: '2025-02-11 09:00' },
-    ],
-  },
-  {
-    ...mockTickets[1],
-    conversation: [
-      { id: 'm4', sender: 'user', name: 'Alex Morgan', content: 'The Asia Pacific preset is giving me very slow speeds, around 5 Mbps instead of 50 Mbps.', timestamp: '2025-02-08 14:00' },
-      { id: 'm5', sender: 'admin', name: 'Admin CoreX', content: 'We are investigating the speed degradation on APAC nodes. Thank you for reporting.', timestamp: '2025-02-08 15:00' },
-      { id: 'm6', sender: 'user', name: 'Alex Morgan', content: 'Any updates? It\'s been two days now.', timestamp: '2025-02-10 10:00' },
-      { id: 'm7', sender: 'admin', name: 'Admin CoreX', content: 'We\'ve identified the issue — a faulty router in Singapore. Replacement is scheduled for tonight.', timestamp: '2025-02-10 14:00' },
-      { id: 'm8', sender: 'user', name: 'Alex Morgan', content: 'Thanks for the update. Hope it gets fixed soon.', timestamp: '2025-02-10 14:30' },
-    ],
-  },
-  {
-    ...mockTickets[2],
-    conversation: [
-      { id: 'm9', sender: 'user', name: 'James Wilson', content: 'I made a payment of ৳500 via bKash but my balance hasn\'t been updated.', timestamp: '2025-02-10 18:00' },
-      { id: 'm10', sender: 'admin', name: 'Admin CoreX', content: 'Please share your transaction ID so we can verify the payment.', timestamp: '2025-02-10 19:00' },
-    ],
-  },
-  {
-    ...mockTickets[3],
-    conversation: [
-      { id: 'm11', sender: 'user', name: 'Sarah Chen', content: 'It would be great if the mobile app had a dark mode option.', timestamp: '2025-01-20 08:00' },
-      { id: 'm12', sender: 'admin', name: 'Admin CoreX', content: 'Thank you for the suggestion! We\'ve added this to our roadmap.', timestamp: '2025-01-21 10:00' },
-      { id: 'm13', sender: 'user', name: 'Sarah Chen', content: 'Awesome! Looking forward to it.', timestamp: '2025-01-22 09:00' },
-      { id: 'm14', sender: 'admin', name: 'Admin CoreX', content: 'Dark mode has been implemented in v2.1.0. Please update your app!', timestamp: '2025-02-01 12:00' },
-    ],
-  },
-]
 
 export function AdminTicketsPage() {
-  const [tickets, setTickets] = useState<TicketData[]>(initialTickets)
+  const { tickets, adminReply, changeStatus, assignTicket, deleteTicket, deleteTickets, bulkClose } = useTicketStore()
+
   const [statusFilter, setStatusFilter] = useState('all')
   const [priorityFilter, setPriorityFilter] = useState('all')
   const [detailOpen, setDetailOpen] = useState(false)
   const [selectedTicket, setSelectedTicket] = useState<TicketData | null>(null)
   const [replyText, setReplyText] = useState('')
 
+  // Delete
+  const [deleteSingleTicket, setDeleteSingleTicket] = useState<TicketData | null>(null)
+  const [deleteSingleOpen, setDeleteSingleOpen] = useState(false)
+
   // Bulk select
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [bulkCloseOpen, setBulkCloseOpen] = useState(false)
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
 
   const toggleSelect = (id: string) => {
     setSelectedIds(prev => {
@@ -148,32 +123,6 @@ export function AdminTicketsPage() {
   const inProgressCount = tickets.filter((t) => t.status === 'in_progress').length
   const closedCount = tickets.filter((t) => t.status === 'closed').length
 
-  const getPriorityBadge = (priority: string) => {
-    switch (priority) {
-      case 'high':
-        return <Badge variant="destructive">High</Badge>
-      case 'medium':
-        return <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">Medium</Badge>
-      case 'low':
-        return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">Low</Badge>
-      default:
-        return <Badge variant="secondary">{priority}</Badge>
-    }
-  }
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'open':
-        return <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">Open</Badge>
-      case 'in_progress':
-        return <Badge className="bg-sky-500/20 text-sky-400 border-sky-500/30">In Progress</Badge>
-      case 'closed':
-        return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">Closed</Badge>
-      default:
-        return <Badge variant="secondary">{status}</Badge>
-    }
-  }
-
   const handleViewTicket = (ticket: TicketData) => {
     setSelectedTicket(ticket)
     setReplyText('')
@@ -183,33 +132,23 @@ export function AdminTicketsPage() {
   const handleSendReply = () => {
     if (!replyText.trim() || !selectedTicket) return
 
-    const newMessage: TicketMessage = {
+    adminReply(selectedTicket.id, replyText)
+
+    // Update local selectedTicket for immediate UI feedback
+    const newMsg = {
       id: `m_${Date.now()}`,
-      sender: 'admin',
+      sender: 'admin' as const,
       name: 'Admin CoreX',
       content: replyText,
       timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16),
     }
-
-    setTickets((prev) =>
-      prev.map((t) =>
-        t.id === selectedTicket.id
-          ? {
-              ...t,
-              conversation: [...t.conversation, newMessage],
-              messages: t.messages + 1,
-              lastUpdate: newMessage.timestamp,
-            }
-          : t
-      )
-    )
     setSelectedTicket((prev) =>
       prev
         ? {
             ...prev,
-            conversation: [...prev.conversation, newMessage],
+            conversation: [...prev.conversation, newMsg],
             messages: prev.messages + 1,
-            lastUpdate: newMessage.timestamp,
+            lastUpdate: newMsg.timestamp,
           }
         : null
     )
@@ -217,14 +156,8 @@ export function AdminTicketsPage() {
     toast.success('Reply sent')
   }
 
-  const handleChangeStatus = (ticketId: string, newStatus: 'open' | 'in_progress' | 'closed') => {
-    setTickets((prev) =>
-      prev.map((t) =>
-        t.id === ticketId
-          ? { ...t, status: newStatus, lastUpdate: new Date().toISOString().replace('T', ' ').slice(0, 16) }
-          : t
-      )
-    )
+  const handleChangeStatus = (ticketId: string, newStatus: TicketStatus) => {
+    changeStatus(ticketId, newStatus)
     if (selectedTicket?.id === ticketId) {
       setSelectedTicket((prev) => (prev ? { ...prev, status: newStatus } : null))
     }
@@ -232,22 +165,41 @@ export function AdminTicketsPage() {
   }
 
   const handleAssign = (ticketId: string) => {
+    assignTicket(ticketId)
+    if (selectedTicket?.id === ticketId) {
+      setSelectedTicket((prev) => (prev ? { ...prev, status: 'in_progress' as TicketStatus } : null))
+    }
     toast.success('Ticket assigned to you')
-    handleChangeStatus(ticketId, 'in_progress')
+  }
+
+  const handleDeleteSingle = () => {
+    if (deleteSingleTicket) {
+      deleteTicket(deleteSingleTicket.id)
+      toast.success(`Ticket ${deleteSingleTicket.id} deleted`)
+      setDeleteSingleOpen(false)
+      setDeleteSingleTicket(null)
+      if (selectedTicket?.id === deleteSingleTicket.id) {
+        setDetailOpen(false)
+      }
+    }
   }
 
   // Bulk close
   const handleBulkClose = () => {
     const count = selectedIds.size
-    const now = new Date().toISOString().replace('T', ' ').slice(0, 16)
-    setTickets((prev) =>
-      prev.map((t) =>
-        selectedIds.has(t.id) ? { ...t, status: 'closed' as const, lastUpdate: now } : t
-      )
-    )
+    bulkClose(Array.from(selectedIds))
     toast.success(`${count} ticket(s) closed`)
     setSelectedIds(new Set())
     setBulkCloseOpen(false)
+  }
+
+  // Bulk delete
+  const handleBulkDelete = () => {
+    const count = selectedIds.size
+    deleteTickets(Array.from(selectedIds))
+    toast.success(`${count} ticket(s) deleted`)
+    setSelectedIds(new Set())
+    setBulkDeleteOpen(false)
   }
 
   return (
@@ -345,6 +297,15 @@ export function AdminTicketsPage() {
             Close Selected
           </Button>
           <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setBulkDeleteOpen(true)}
+            className="gap-1 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+          >
+            <Trash2 className="size-3.5" />
+            Delete Selected
+          </Button>
+          <Button
             variant="ghost"
             size="sm"
             onClick={() => setSelectedIds(new Set())}
@@ -434,6 +395,14 @@ export function AdminTicketsPage() {
                                 Close Ticket
                               </DropdownMenuItem>
                             )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => { setDeleteSingleTicket(ticket); setDeleteSingleOpen(true) }}
+                              className="text-red-400 focus:text-red-300 focus:bg-red-500/10"
+                            >
+                              <Trash2 className="mr-2 size-4" />
+                              Delete
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
@@ -467,6 +436,44 @@ export function AdminTicketsPage() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleBulkClose}>
               Close Selected
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk Delete Confirmation */}
+      <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Selected Tickets</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>{selectedIds.size}</strong> ticket(s)?
+              This will remove them from both admin and user history. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleBulkDelete} className="bg-red-600 hover:bg-red-700">
+              Delete Selected
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Single Confirmation */}
+      <AlertDialog open={deleteSingleOpen} onOpenChange={setDeleteSingleOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Ticket</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete ticket <strong>{deleteSingleTicket?.id}</strong> — &quot;{deleteSingleTicket?.subject}&quot;?
+              This will remove it from both admin and user history. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteSingle} className="bg-red-600 hover:bg-red-700">
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

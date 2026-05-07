@@ -62,13 +62,15 @@ interface PaymentState {
   paymentConfig: PaymentConfig
 
   // Actions - user side
-  submitBalanceRequest: (userId: string, userName: string, amount: number, method: PaymentMethod, trxId: string) => BalanceRequest
+  submitBalanceRequest: (userId: string, userName: string, amount: number, method: PaymentMethod, trxId: string) => BalanceRequest | null
 
   // Actions - admin side
   approveRequest: (requestId: string, adminNote?: string) => void
   rejectRequest: (requestId: string, adminNote?: string) => void
   bulkApprove: (requestIds: string[]) => void
   bulkReject: (requestIds: string[]) => void
+  deleteRequest: (requestId: string) => void
+  deleteRequests: (requestIds: string[]) => void
 
   // Actions - config
   updatePaymentConfig: (config: Partial<PaymentConfig>) => void
@@ -78,6 +80,7 @@ interface PaymentState {
   getUserRequests: (userId: string) => BalanceRequest[]
   getUserTransactions: (userId: string) => Transaction[]
   getVisibleTransactions: (userId: string) => Transaction[]
+  isTrxIdApproved: (trxId: string) => boolean
 }
 
 const initialTransactions: Transaction[] = [
@@ -107,6 +110,11 @@ export const usePaymentStore = create<PaymentState>((set, get) => ({
   },
 
   submitBalanceRequest: (userId, userName, amount, method, trxId) => {
+    // Check if this TrxID has already been approved
+    if (get().isTrxIdApproved(trxId)) {
+      return null
+    }
+
     const request: BalanceRequest = {
       id: generateId('pay'),
       userId,
@@ -194,6 +202,19 @@ export const usePaymentStore = create<PaymentState>((set, get) => ({
     }))
   },
 
+  deleteRequest: (requestId) => {
+    set((state) => ({
+      balanceRequests: state.balanceRequests.filter((r) => r.id !== requestId),
+    }))
+  },
+
+  deleteRequests: (requestIds) => {
+    const set_ = new Set(requestIds)
+    set((state) => ({
+      balanceRequests: state.balanceRequests.filter((r) => !set_.has(r.id)),
+    }))
+  },
+
   updatePaymentConfig: (config) => {
     set((state) => ({
       paymentConfig: { ...state.paymentConfig, ...config },
@@ -204,6 +225,7 @@ export const usePaymentStore = create<PaymentState>((set, get) => ({
   getUserRequests: (userId) => get().balanceRequests.filter((r) => r.userId === userId),
   getUserTransactions: (userId) => get().transactions.filter((t) => t.userId === userId),
   getVisibleTransactions: (userId) => get().transactions.filter((t) => t.userId === userId && isWithin90Days(t.date)),
+  isTrxIdApproved: (trxId) => get().balanceRequests.some((r) => r.trxId === trxId && r.status === 'approved'),
 }))
 
 export { isWithin90Days, getDaysBeforeVanish, TRANSACTIONS_VANISH_DAYS }

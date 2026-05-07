@@ -10,6 +10,13 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
   Table,
   TableBody,
   TableCell,
@@ -39,6 +46,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
@@ -55,6 +63,7 @@ import {
   DollarSign,
   Clock,
   Bell,
+  Trash2,
 } from 'lucide-react'
 
 function PaymentStatusBadge({ status }: { status: RequestStatus }) {
@@ -76,10 +85,11 @@ function MethodBadge({ method }: { method: PaymentMethod }) {
 }
 
 export function AdminPayments() {
-  const { balanceRequests, approveRequest, rejectRequest, bulkApprove, bulkReject } = usePaymentStore()
+  const { balanceRequests, approveRequest, rejectRequest, bulkApprove, bulkReject, deleteRequest, deleteRequests } = usePaymentStore()
 
   const [activeTab, setActiveTab] = useState('pending')
   const [searchQuery, setSearchQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
 
   // View details dialog
   const [viewPayment, setViewPayment] = useState<BalanceRequest | null>(null)
@@ -92,10 +102,15 @@ export function AdminPayments() {
   const [rejectOpen, setRejectOpen] = useState(false)
   const [rejectReason, setRejectReason] = useState('')
 
+  // Delete single
+  const [deleteSinglePayment, setDeleteSinglePayment] = useState<BalanceRequest | null>(null)
+  const [deleteSingleOpen, setDeleteSingleOpen] = useState(false)
+
   // Bulk select
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [bulkApproveOpen, setBulkApproveOpen] = useState(false)
   const [bulkRejectOpen, setBulkRejectOpen] = useState(false)
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
 
   const toggleSelect = (id: string) => {
     setSelectedIds(prev => {
@@ -114,10 +129,13 @@ export function AdminPayments() {
   }
 
   const pendingPayments = balanceRequests.filter((p) => p.status === 'pending')
-  const allPayments = balanceRequests
 
   const getFilteredPayments = () => {
-    let list = activeTab === 'pending' ? pendingPayments : allPayments
+    let list = activeTab === 'pending' ? pendingPayments : balanceRequests
+    // Apply status filter (only in "all" tab)
+    if (activeTab === 'all' && statusFilter !== 'all') {
+      list = list.filter((p) => p.status === statusFilter)
+    }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase()
       list = list.filter(
@@ -162,6 +180,15 @@ export function AdminPayments() {
     }
   }
 
+  const handleDeleteSingle = () => {
+    if (deleteSinglePayment) {
+      deleteRequest(deleteSinglePayment.id)
+      toast.success(`Payment ${deleteSinglePayment.trxId} deleted`)
+      setDeleteSingleOpen(false)
+      setDeleteSinglePayment(null)
+    }
+  }
+
   const handleBulkApprove = () => {
     const count = selectedIds.size
     bulkApprove(Array.from(selectedIds))
@@ -178,29 +205,50 @@ export function AdminPayments() {
     setBulkRejectOpen(false)
   }
 
+  const handleBulkDelete = () => {
+    const count = selectedIds.size
+    deleteRequests(Array.from(selectedIds))
+    toast.success(`${count} payment(s) deleted`)
+    setSelectedIds(new Set())
+    setBulkDeleteOpen(false)
+  }
+
   const renderPaymentsTable = (list: BalanceRequest[], showCheckbox = true) => (
     <>
       {/* Bulk Action Bar */}
       {showCheckbox && selectedIds.size > 0 && (
         <div className="flex items-center gap-3 p-3 bg-muted/50 border-b">
           <span className="text-sm font-medium">{selectedIds.size} selected</span>
+          {list.some((p) => selectedIds.has(p.id) && p.status === 'pending') && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setBulkApproveOpen(true)}
+                className="gap-1 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10"
+              >
+                <CheckCircle className="size-3.5" />
+                Approve Selected
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setBulkRejectOpen(true)}
+                className="gap-1 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+              >
+                <XCircle className="size-3.5" />
+                Reject Selected
+              </Button>
+            </>
+          )}
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setBulkApproveOpen(true)}
-            className="gap-1 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10"
-          >
-            <CheckCircle className="size-3.5" />
-            Approve Selected
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setBulkRejectOpen(true)}
+            onClick={() => setBulkDeleteOpen(true)}
             className="gap-1 text-red-400 hover:text-red-300 hover:bg-red-500/10"
           >
-            <XCircle className="size-3.5" />
-            Reject Selected
+            <Trash2 className="size-3.5" />
+            Delete Selected
           </Button>
           <Button
             variant="ghost"
@@ -305,6 +353,14 @@ export function AdminPayments() {
                               </DropdownMenuItem>
                             </>
                           )}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => { setDeleteSinglePayment(payment); setDeleteSingleOpen(true) }}
+                            className="text-red-400 focus:text-red-300 focus:bg-red-500/10"
+                          >
+                            <Trash2 className="mr-2 size-4" />
+                            Delete
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
@@ -412,18 +468,35 @@ export function AdminPayments() {
       </Card>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setSelectedIds(new Set()) }}>
-        <TabsList>
-          <TabsTrigger value="pending">
-            Pending
-            {pendingCount > 0 && (
-              <Badge variant="destructive" className="ml-1.5 text-xs px-1.5 py-0">
-                {pendingCount}
-              </Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="all">All Payments</TabsTrigger>
-        </TabsList>
+      <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setSelectedIds(new Set()); setStatusFilter('all') }}>
+        <div className="flex items-center gap-3 flex-wrap">
+          <TabsList>
+            <TabsTrigger value="pending">
+              Pending
+              {pendingCount > 0 && (
+                <Badge variant="destructive" className="ml-1.5 text-xs px-1.5 py-0">
+                  {pendingCount}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="all">All Payments</TabsTrigger>
+          </TabsList>
+
+          {/* Status Filter (visible only in "All" tab) */}
+          {activeTab === 'all' && (
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Filter Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+        </div>
 
         <TabsContent value="pending">
           <Card>
@@ -441,7 +514,7 @@ export function AdminPayments() {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base">All Payments</CardTitle>
-              <CardDescription>Complete payment history</CardDescription>
+              <CardDescription>Complete payment history. Use status filter to find approved/rejected/pending payments easily.</CardDescription>
             </CardHeader>
             <CardContent className="p-0">
               {renderPaymentsTable(filteredPayments, true)}
@@ -571,6 +644,25 @@ export function AdminPayments() {
         </DialogContent>
       </Dialog>
 
+      {/* Delete Single Confirmation */}
+      <AlertDialog open={deleteSingleOpen} onOpenChange={setDeleteSingleOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Payment Record</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete payment <strong>{deleteSinglePayment?.trxId}</strong>?
+              This will remove the record from both admin and user history. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteSingle} className="bg-red-600 hover:bg-red-700">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Bulk Approve Confirmation */}
       <AlertDialog open={bulkApproveOpen} onOpenChange={setBulkApproveOpen}>
         <AlertDialogContent>
@@ -591,7 +683,7 @@ export function AdminPayments() {
       </AlertDialog>
 
       {/* Bulk Reject Confirmation */}
-      <AlertDialog open={bulkRejectOpen} onOpenChange={setBulkRejectOpen}>
+      <AlertDialog open={bulkRejectOpen} onValueChange={setBulkRejectOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Reject Selected Payments</AlertDialogTitle>
@@ -604,6 +696,25 @@ export function AdminPayments() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleBulkReject} className="bg-red-600 hover:bg-red-700">
               Reject Selected
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk Delete Confirmation */}
+      <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Selected Payments</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>{selectedIds.size}</strong> payment record(s)?
+              This will remove them from both admin and user history. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleBulkDelete} className="bg-red-600 hover:bg-red-700">
+              Delete Selected
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -131,6 +131,13 @@ function ProviderBadge({ provider }: { provider: string }) {
   return <Badge variant="outline" className="text-xs bg-sky-500/10 text-sky-400 border-sky-500/30">Telegram</Badge>
 }
 
+function isInactive60Days(lastActive: string): boolean {
+  const lastActiveDate = new Date(lastActive)
+  const sixtyDaysAgo = new Date()
+  sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60)
+  return lastActiveDate < sixtyDaysAgo
+}
+
 function BalanceTypeBadge({ type }: { type: BalanceHistoryEntry['type'] }) {
   switch (type) {
     case 'topup':
@@ -200,7 +207,11 @@ export function AdminUsers() {
       user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.id.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesStatus = statusFilter === 'all' || user.status === statusFilter
+    const matchesStatus =
+      statusFilter === 'all' ||
+      (statusFilter === 'inactive_60d'
+        ? user.balance === 0 && isInactive60Days(user.lastActive)
+        : user.status === statusFilter)
     const matchesRole = roleFilter === 'all' || user.role === roleFilter
     return matchesSearch && matchesStatus && matchesRole
   })
@@ -346,6 +357,7 @@ export function AdminUsers() {
                 <SelectItem value="active">Active</SelectItem>
                 <SelectItem value="banned">Banned</SelectItem>
                 <SelectItem value="suspended">Suspended</SelectItem>
+                <SelectItem value="inactive_60d">Inactive (60d)</SelectItem>
               </SelectContent>
             </Select>
             <Select value={roleFilter} onValueChange={setRoleFilter}>
