@@ -509,12 +509,6 @@ export const usePaymentStore = create<PaymentState>((set, get) => ({
   isTrxIdApproved: (trxId) => get().balanceRequests.some((r) => r.trxId === trxId && r.status === 'approved'),
 }))
 
-// ── Auto-sync on store creation (setTimeout avoids SSR issues) ──
-
-if (typeof window !== 'undefined') {
-  setTimeout(() => {
-    usePaymentStore.getState().syncWithSupabase()
-  }, 0)
-}
+// NOTE: Auto-sync removed — call syncAllStores() from the app to trigger sync
 
 export { isWithin90Days, getDaysBeforeVanish, TRANSACTIONS_VANISH_DAYS }

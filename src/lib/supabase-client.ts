@@ -1,18 +1,15 @@
 /**
- * CoreX — Supabase Client (Safe Lazy Init)
+ * CoreX — Supabase Client (Crash-Proof Lazy Init)
  *
- * Supports both new (sb_publishable/sb_secret) and legacy (eyJ JWT) key formats.
- * Clients are lazy-initialized on first actual use to prevent crashes.
+ * IMPORTANT: All consumers must call supabaseBrowser() / supabaseServer()
+ * as FUNCTIONS, not use them as objects. This ensures lazy initialization.
+ *
+ * - Clients are created on first actual use
+ * - If credentials are missing/invalid, a no-op placeholder is used
+ * - Placeholder client never crashes but all operations fail gracefully
  */
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
-
-// ── Key Validation ──
-
-function isValidKey(key: string): boolean {
-  if (!key || key.length < 10) return false
-  return key.startsWith('sb_publishable_') || key.startsWith('sb_secret_') || key.startsWith('eyJ')
-}
 
 // ── Config Check ──
 
@@ -22,11 +19,8 @@ export function getSupabaseConfig() {
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 
   const hasUrl = url.startsWith('https://') && url.includes('.supabase.co')
-  const hasAnonKey = isValidKey(anonKey)
-  const hasServiceKey = isValidKey(serviceKey)
-
-  const anonKeyFormat = anonKey.startsWith('sb_publishable_') ? 'new' : anonKey.startsWith('eyJ') ? 'legacy' : 'invalid'
-  const serviceKeyFormat = serviceKey.startsWith('sb_secret_') ? 'new' : serviceKey.startsWith('eyJ') ? 'legacy' : 'invalid'
+  const hasAnonKey = !!(anonKey && anonKey.length > 20)
+  const hasServiceKey = !!(serviceKey && serviceKey.length > 20)
 
   return {
     url,
@@ -36,9 +30,6 @@ export function getSupabaseConfig() {
     hasUrl,
     hasAnonKey,
     hasServiceKey,
-    anonKeyFormat,
-    serviceKeyFormat,
-    isModernKeys: anonKeyFormat === 'new' && serviceKeyFormat === 'new',
     issues: [
       !hasUrl && 'NEXT_PUBLIC_SUPABASE_URL is missing or invalid',
       !hasAnonKey && 'NEXT_PUBLIC_SUPABASE_ANON_KEY is missing or invalid',
@@ -47,23 +38,26 @@ export function getSupabaseConfig() {
   }
 }
 
-// ── Placeholder client (never crashes, but all operations fail gracefully) ──
+// ── Placeholder client (never crashes, all operations return empty/error) ──
 
-function createPlaceholderClient(): SupabaseClient {
-  // Use a minimal valid-looking URL/key so createClient doesn't throw
-  return createClient('https://placeholder.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder', {
+let _placeholder: SupabaseClient | null = null
+
+function getPlaceholderClient(): SupabaseClient {
+  if (_placeholder) return _placeholder
+  _placeholder = createClient('https://placeholder.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder', {
     auth: { autoRefreshToken: false, persistSession: false },
   })
+  return _placeholder
 }
 
 // ── Browser Client (lazy, safe) ──
 
-let _supabaseBrowser: SupabaseClient | null = null
+let _browserClient: SupabaseClient | null = null
 let _browserInitAttempted = false
 
 export function getSupabaseBrowser(): SupabaseClient {
-  if (_supabaseBrowser) return _supabaseBrowser
-  if (_browserInitAttempted) return _supabaseBrowser!
+  if (_browserClient) return _browserClient
+  if (_browserInitAttempted) return _browserClient || getPlaceholderClient()
 
   _browserInitAttempted = true
 
@@ -71,36 +65,33 @@ export function getSupabaseBrowser(): SupabaseClient {
     const config = getSupabaseConfig()
     if (!config.configured) {
       console.warn('[Supabase] Browser: credentials not configured, using placeholder')
-      _supabaseBrowser = createPlaceholderClient()
-      return _supabaseBrowser
+      return getPlaceholderClient()
     }
 
-    _supabaseBrowser = createClient(config.url, config.anonKey, {
-      realtime: { params: { eventsPerSecond: 10 } },
+    _browserClient = createClient(config.url, config.anonKey, {
+      realtime: {
+        params: { eventsPerSecond: 10 },
+      },
     })
-    console.log('[Supabase] Browser client ready', config.isModernKeys ? '(modern keys)' : '(legacy keys)')
+    console.log('[Supabase] Browser client ready')
+    return _browserClient
   } catch (err) {
     console.error('[Supabase] Browser init failed:', err)
-    _supabaseBrowser = createPlaceholderClient()
+    return getPlaceholderClient()
   }
-
-  return _supabaseBrowser
 }
 
-/**
- * Browser client — import and call as a function.
- * DO NOT use at module top-level; call inside useEffect or event handlers.
- */
+/** Browser client — call as function: supabaseBrowser() */
 export { getSupabaseBrowser as supabaseBrowser }
 
 // ── Server Client (lazy, safe) ──
 
-let _supabaseServer: SupabaseClient | null = null
+let _serverClient: SupabaseClient | null = null
 let _serverInitAttempted = false
 
 export function getSupabaseServer(): SupabaseClient {
-  if (_supabaseServer) return _supabaseServer
-  if (_serverInitAttempted) return _supabaseServer!
+  if (_serverClient) return _serverClient
+  if (_serverInitAttempted) return _serverClient || getPlaceholderClient()
 
   _serverInitAttempted = true
 
@@ -108,33 +99,28 @@ export function getSupabaseServer(): SupabaseClient {
     const config = getSupabaseConfig()
     if (!config.configured) {
       console.warn('[Supabase] Server: credentials not configured, using placeholder')
-      _supabaseServer = createPlaceholderClient()
-      return _supabaseServer
+      return getPlaceholderClient()
     }
 
-    _supabaseServer = createClient(config.url, config.serviceKey, {
+    _serverClient = createClient(config.url, config.serviceKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     })
-    console.log('[Supabase] Server client ready', config.isModernKeys ? '(modern keys)' : '(legacy keys)')
+    console.log('[Supabase] Server client ready')
+    return _serverClient
   } catch (err) {
     console.error('[Supabase] Server init failed:', err)
-    _supabaseServer = createPlaceholderClient()
+    return getPlaceholderClient()
   }
-
-  return _supabaseServer
 }
 
-/**
- * Server client — import and call as a function.
- * Use inside API route handlers, NOT at module top-level.
- */
+/** Server client — call as function: supabaseServer() */
 export { getSupabaseServer as supabaseServer }
 
 // ── Reset (for testing / env change) ──
 
 export function resetSupabaseClients() {
-  _supabaseBrowser = null
-  _supabaseServer = null
+  _browserClient = null
+  _serverClient = null
   _browserInitAttempted = false
   _serverInitAttempted = false
 }

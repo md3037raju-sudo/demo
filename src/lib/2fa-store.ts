@@ -224,10 +224,4 @@ export const use2FAStore = create<TwoFAState>((set, get) => ({
   },
 }))
 
-// ── Auto-sync on store creation (setTimeout avoids SSR issues) ──
-
-if (typeof window !== 'undefined') {
-  setTimeout(() => {
-    use2FAStore.getState().syncWithSupabase()
-  }, 0)
-}
+// NOTE: Auto-sync removed — call syncAllStores() from the app to trigger sync

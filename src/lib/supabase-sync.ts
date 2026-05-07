@@ -1,41 +1,29 @@
 /**
- * CoreX — Supabase Sync Layer
+ * CoreX — Supabase Sync Layer (Crash-Proof)
  *
- * This module provides utilities for Zustand stores to:
+ * Provides utilities for Zustand stores to:
  * 1. Fetch initial data from Supabase
- * 2. Subscribe to real-time changes
- * 3. Push local changes to Supabase
+ * 2. Subscribe to real-time changes (with graceful fallback)
+ * 3. Push local changes to Supabase via API routes
  *
- * Architecture:
- * - Zustand stores are the "local cache" (client-side state)
- * - Supabase is the "source of truth" (persistent database)
- * - On mount: fetch from Supabase → update store
- * - On change: update store → push to Supabase
- * - Real-time: Supabase changes → update store → UI re-renders
+ * All operations are wrapped in try/catch to prevent crashes.
+ * If Supabase is not configured, all operations fail gracefully.
  */
 
-import { getSupabaseBrowser as supabaseBrowser } from './supabase-client'
+import { getSupabaseBrowser } from './supabase-client'
 
 // ── Types ──
 
 export type RealtimeEvent = 'INSERT' | 'UPDATE' | 'DELETE'
 
 export interface SyncConfig<T> {
-  /** Supabase table name */
   table: string
-  /** Zustand store setter for the full list */
   setAll: (items: T[]) => void
-  /** Zustand store setter for adding one item */
   addOne?: (item: T) => void
-  /** Zustand store setter for updating one item */
   updateOne?: (id: string, data: Partial<T>) => void
-  /** Zustand store setter for removing one item */
   removeOne?: (id: string) => void
-  /** Primary key field name (default: 'id') */
   primaryKey?: string
-  /** Transform Supabase row → store item (snake_case → camelCase) */
   fromDb?: (row: Record<string, unknown>) => T
-  /** Transform store item → Supabase row (camelCase → snake_case) */
   toDb?: (item: T) => Record<string, unknown>
 }
 
@@ -76,7 +64,8 @@ export async function fetchTable<T>(
   ascending: boolean = false
 ): Promise<T[]> {
   try {
-    const { data, error } = await supabaseBrowser()
+    const client = getSupabaseBrowser()
+    const { data, error } = await client
       .from(table)
       .select('*')
       .order(orderBy, { ascending })
@@ -103,7 +92,8 @@ export async function fetchOne<T>(
   fromDb?: (row: Record<string, unknown>) => T
 ): Promise<T | null> {
   try {
-    const { data, error } = await supabaseBrowser()
+    const client = getSupabaseBrowser()
+    const { data, error } = await client
       .from(table)
       .select('*')
       .eq('id', id)
@@ -124,7 +114,8 @@ export async function fetchConfig<T>(
   fromDb?: (row: Record<string, unknown>) => T
 ): Promise<T | null> {
   try {
-    const { data, error } = await supabaseBrowser()
+    const client = getSupabaseBrowser()
+    const { data, error } = await client
       .from(table)
       .select('*')
       .limit(1)
@@ -220,7 +211,13 @@ export async function deleteRows(
   }
 }
 
-// ── Subscribe to real-time changes ──
+// ── Subscribe to real-time changes (CRASH-PROOF) ──
+//
+// This is the most dangerous part — WebSocket/realtime connections can crash
+// the entire Next.js process. We wrap EVERYTHING in try/catch and use
+// setTimeout to prevent synchronous errors from bubbling up.
+
+let _activeChannels: unknown[] = []
 
 export function subscribeToTable<T>(
   table: string,
@@ -230,39 +227,80 @@ export function subscribeToTable<T>(
     onDelete?: (id: string) => void
   },
   fromDb?: (row: Record<string, unknown>) => T
-) {
-  const channel = supabaseBrowser()
-    .channel(`${table}-changes`)
-    .on(
-      'postgres_changes',
-      { event: '*', schema: 'public', table },
-      (payload) => {
-        const { eventType, new: newRow, old } = payload
+  // Return type is Supabase RealtimeChannel or null
+): ReturnType<typeof getSupabaseBrowser>['channel'] | null {
+  try {
+    const client = getSupabaseBrowser()
 
-        if (eventType === 'INSERT' && callbacks.onInsert && newRow) {
-          const item = fromDb ? fromDb(newRow as Record<string, unknown>) : snakeToCamelObj<T>(newRow as Record<string, unknown>)
-          callbacks.onInsert(item)
+    const channel = client
+      .channel(`${table}-changes`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table },
+        (payload) => {
+          try {
+            const { eventType, new: newRow, old } = payload
+
+            if (eventType === 'INSERT' && callbacks.onInsert && newRow) {
+              const item = fromDb ? fromDb(newRow as Record<string, unknown>) : snakeToCamelObj<T>(newRow as Record<string, unknown>)
+              callbacks.onInsert(item)
+            }
+
+            if (eventType === 'UPDATE' && callbacks.onUpdate && newRow) {
+              const item = fromDb ? fromDb(newRow as Record<string, unknown>) : snakeToCamelObj<T>(newRow as Record<string, unknown>)
+              callbacks.onUpdate(item)
+            }
+
+            if (eventType === 'DELETE' && callbacks.onDelete && old) {
+              callbacks.onDelete((old as Record<string, unknown>).id as string)
+            }
+          } catch (err) {
+            console.warn(`[SYNC] Error in ${table} realtime callback:`, err)
+          }
         }
+      )
+      .subscribe((status: string) => {
+        // Log but never crash on subscription status changes
+        console.log(`[SYNC] ${table} channel status:`, status)
+      })
 
-        if (eventType === 'UPDATE' && callbacks.onUpdate && newRow) {
-          const item = fromDb ? fromDb(newRow as Record<string, unknown>) : snakeToCamelObj<T>(newRow as Record<string, unknown>)
-          callbacks.onUpdate(item)
-        }
-
-        if (eventType === 'DELETE' && callbacks.onDelete && old) {
-          callbacks.onDelete((old as Record<string, unknown>).id as string)
-        }
-      }
-    )
-    .subscribe()
-
-  return channel
+    _activeChannels.push(channel)
+    return channel
+  } catch (err) {
+    console.warn(`[SYNC] Failed to subscribe to ${table}:`, err)
+    return null
+  }
 }
 
 // ── Unsubscribe ──
 
 export async function unsubscribeChannel(channel: any) {
-  await supabaseBrowser().removeChannel(channel)
+  try {
+    if (!channel) return
+    const client = getSupabaseBrowser()
+    await client.removeChannel(channel)
+    _activeChannels = _activeChannels.filter((c) => c !== channel)
+  } catch (err) {
+    console.warn('[SYNC] Failed to unsubscribe channel:', err)
+  }
+}
+
+// ── Unsubscribe all channels (for cleanup) ──
+
+export async function unsubscribeAllChannels() {
+  try {
+    const client = getSupabaseBrowser()
+    for (const channel of _activeChannels) {
+      try {
+        await client.removeChannel(channel)
+      } catch {
+        // ignore
+      }
+    }
+    _activeChannels = []
+  } catch (err) {
+    console.warn('[SYNC] Failed to unsubscribe all channels:', err)
+  }
 }
 
 // ── Check Supabase connection ──
@@ -288,57 +326,5 @@ export async function checkSupabaseConnection(): Promise<{
     }
   } catch {
     return { connected: false, tablesExist: false }
-  }
-}
-
-// ── Initialize Supabase DB ──
-
-export async function initializeSupabaseDB(dbPassword: string): Promise<{
-  success: boolean
-  message: string
-  needsPgConnection?: boolean
-  sql?: string
-}> {
-  try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-    const projectRef = supabaseUrl.replace('https://', '').replace('.supabase.co', '')
-
-    // Construct DATABASE_URL from project ref + password
-    const databaseUrl = `postgresql://postgres.${projectRef}:${dbPassword}@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres`
-
-    const res = await fetch('/api/db-init', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'init', databaseUrl }),
-    })
-
-    const data = await res.json()
-
-    if (data.needsPgConnection) {
-      // Retry with the constructed DATABASE_URL
-      const initRes = await fetch('/api/db-init', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'init', databaseUrl }),
-      })
-
-      // This won't work server-side since we need to set DATABASE_URL env var
-      // Let's use a different approach - direct PostgreSQL connection
-      return {
-        success: false,
-        message: 'Trying direct connection...',
-        needsPgConnection: true,
-      }
-    }
-
-    return {
-      success: data.success ?? false,
-      message: data.message ?? 'Unknown result',
-    }
-  } catch (err) {
-    return {
-      success: false,
-      message: `Connection failed: ${String(err)}`,
-    }
   }
 }

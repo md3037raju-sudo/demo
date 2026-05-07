@@ -43,6 +43,7 @@ import { useSubscriptionStore } from '@/lib/subscription-store'
 import { useCouponStore } from '@/lib/coupon-store'
 import { useReferralStore } from '@/lib/referral-store'
 import { COREX_TABLES } from '@/lib/supabase-schema'
+import { forceResyncAllStores } from '@/lib/sync-all'
 
 export function AdminDbInitPage() {
   // Connection states
@@ -156,6 +157,8 @@ export function AdminDbInitPage() {
           description: data.message,
         })
         await checkConnection()
+        // Sync all stores with the newly created database
+        await forceResyncAllStores()
       } else {
         setInitProgress(0)
         setInitMessage('')
@@ -191,6 +194,8 @@ export function AdminDbInitPage() {
         toast.success('Mock data seeded!', {
           description: 'All tables populated with sample data.',
         })
+        // Re-sync stores to pick up the seeded data
+        await forceResyncAllStores()
       } else {
         toast.error('Seeding failed', {
           description: data.errors?.join(', ') || data.message,

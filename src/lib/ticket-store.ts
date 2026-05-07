@@ -506,10 +506,4 @@ export const useTicketStore = create<TicketState>((set, get) => ({
   getTicketById: (ticketId) => get().tickets.find((t) => t.id === ticketId),
 }))
 
-// ── Auto-sync on store creation (setTimeout avoids SSR issues) ──
-
-if (typeof window !== 'undefined') {
-  setTimeout(() => {
-    useTicketStore.getState().syncWithSupabase()
-  }, 0)
-}
+// NOTE: Auto-sync removed — call syncAllStores() from the app to trigger sync

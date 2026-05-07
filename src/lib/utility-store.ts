@@ -131,13 +131,7 @@ export const useUtilityStore = create<UtilityState>((set, get) => ({
   },
 }))
 
-// ── Auto-sync on store creation (setTimeout avoids SSR issues) ──
-
-if (typeof window !== 'undefined') {
-  setTimeout(() => {
-    useUtilityStore.getState().syncWithSupabase()
-  }, 0)
-}
+// NOTE: Auto-sync removed — call syncAllStores() from the app to trigger sync
 
 /**
  * Check if a value is a valid URL (starts with http:// or https://)

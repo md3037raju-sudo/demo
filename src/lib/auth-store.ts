@@ -424,10 +424,5 @@ export function addBalanceToUser(userId: string, amount: number) {
   }
 }
 
-// ── Auto-sync on store creation (setTimeout avoids SSR issues) ──
-
-if (typeof window !== 'undefined') {
-  setTimeout(() => {
-    useAuthStore.getState().syncWithSupabase()
-  }, 0)
-}
+// NOTE: Auto-sync removed — call syncAllStores() from the app to trigger sync
+// This prevents crashes from multiple concurrent Supabase connections on page load

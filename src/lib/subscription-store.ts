@@ -284,10 +284,4 @@ export const useSubscriptionStore = create<SubscriptionState>((set, get) => ({
   },
 }))
 
-// ── Auto-sync on store creation (setTimeout avoids SSR issues) ──
-
-if (typeof window !== 'undefined') {
-  setTimeout(() => {
-    useSubscriptionStore.getState().syncWithSupabase()
-  }, 0)
-}
+// NOTE: Auto-sync removed — call syncAllStores() from the app to trigger sync
