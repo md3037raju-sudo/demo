@@ -76,10 +76,32 @@ export function AdminDbInitPage() {
   const [localDownloadComplete, setLocalDownloadComplete] = useState(false)
   const [supabaseDownloadComplete, setSupabaseDownloadComplete] = useState(false)
 
+  // Supabase config status
+  const [supabaseConfig, setSupabaseConfig] = useState<{
+    configured: boolean
+    hasUrl: boolean
+    hasAnonKey: boolean
+    hasServiceKey: boolean
+    issues: string[]
+    urlMasked: string
+    anonKeyHint: string
+  } | null>(null)
+
   // Auto-check connection on mount
   useEffect(() => {
+    checkSupabaseConfig()
     checkConnection()
   }, [])
+
+  const checkSupabaseConfig = async () => {
+    try {
+      const res = await fetch('/api/supabase/config')
+      const data = await res.json()
+      setSupabaseConfig(data)
+    } catch {
+      // ignore
+    }
+  }
 
   const checkConnection = async () => {
     setIsLoadingStatus(true)
@@ -421,26 +443,80 @@ export function AdminDbInitPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Config Status */}
+          {supabaseConfig && !supabaseConfig.configured && (
+            <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 space-y-2">
+              <div className="flex items-center gap-2 text-red-400 font-semibold text-sm">
+                <AlertTriangle className="size-4" />
+                Supabase Credentials Not Configured
+              </div>
+              <p className="text-xs text-red-400/80">
+                The keys in your <code className="bg-muted px-1 rounded">.env.local</code> are not valid Supabase client keys.
+                You need JWT-format keys from your Supabase Dashboard.
+              </p>
+              <div className="space-y-1.5 mt-2">
+                <div className="flex items-center gap-2 text-xs">
+                  <span className={`size-2 rounded-full ${supabaseConfig.hasUrl ? 'bg-emerald-400' : 'bg-red-400'}`} />
+                  <span className={supabaseConfig.hasUrl ? 'text-emerald-400' : 'text-red-400'}>
+                    Project URL: {supabaseConfig.hasUrl ? '✓ Valid' : '✗ Missing or invalid (must be https://<project>.supabase.co)'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-xs">
+                  <span className={`size-2 rounded-full ${supabaseConfig.hasAnonKey ? 'bg-emerald-400' : 'bg-red-400'}`} />
+                  <span className={supabaseConfig.hasAnonKey ? 'text-emerald-400' : 'text-red-400'}>
+                    Anon Key: {supabaseConfig.hasAnonKey ? '✓ Valid JWT' : `✗ Invalid (current: ${supabaseConfig.anonKeyHint}... — must be a JWT starting with eyJ)`}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-xs">
+                  <span className={`size-2 rounded-full ${supabaseConfig.hasServiceKey ? 'bg-emerald-400' : 'bg-red-400'}`} />
+                  <span className={supabaseConfig.hasServiceKey ? 'text-emerald-400' : 'text-red-400'}>
+                    Service Role Key: {supabaseConfig.hasServiceKey ? '✓ Valid JWT' : '✗ Invalid (must be a JWT starting with eyJ)'}
+                  </span>
+                </div>
+              </div>
+              <div className="mt-3 rounded-md bg-muted/50 p-3 text-xs space-y-2">
+                <p className="font-semibold text-foreground">How to get the correct keys:</p>
+                <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+                  <li>Go to <strong>supabase.com</strong> → Your Project → <strong>Settings</strong> → <strong>API</strong></li>
+                  <li>Copy <strong>Project URL</strong> → paste as <code className="bg-muted px-1 rounded">NEXT_PUBLIC_SUPABASE_URL</code></li>
+                  <li>Copy <strong>anon/public</strong> key → paste as <code className="bg-muted px-1 rounded">NEXT_PUBLIC_SUPABASE_ANON_KEY</code></li>
+                  <li>Copy <strong>service_role</strong> key → paste as <code className="bg-muted px-1 rounded">SUPABASE_SERVICE_ROLE_KEY</code></li>
+                </ol>
+                <p className="text-amber-500 font-medium mt-1">
+                  ⚠ The keys you provided (sb_publishable_... / sb_secret_...) are Management API keys, NOT database client keys.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Current Config Display */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="rounded-lg border p-3 space-y-1">
               <p className="text-xs text-muted-foreground">Project URL</p>
               <p className="text-xs font-mono truncate">
-                {process.env.NEXT_PUBLIC_SUPABASE_URL || 'Not set'}
+                {supabaseConfig?.urlMasked || 'Checking...'}
               </p>
             </div>
             <div className="rounded-lg border p-3 space-y-1">
-              <p className="text-xs text-muted-foreground">Anon Key</p>
+              <div className="flex items-center gap-1">
+                <p className="text-xs text-muted-foreground">Anon Key</p>
+                {supabaseConfig && (
+                  <span className={`size-1.5 rounded-full ${supabaseConfig.hasAnonKey ? 'bg-emerald-400' : 'bg-red-400'}`} />
+                )}
+              </div>
               <p className="text-xs font-mono truncate">
-                {process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-                  ? `${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.slice(0, 15)}...`
-                  : 'Not set'}
+                {supabaseConfig?.anonKeyHint || 'Checking...'}...
               </p>
             </div>
             <div className="rounded-lg border p-3 space-y-1">
-              <p className="text-xs text-muted-foreground">Service Role</p>
+              <div className="flex items-center gap-1">
+                <p className="text-xs text-muted-foreground">Service Role</p>
+                {supabaseConfig && (
+                  <span className={`size-1.5 rounded-full ${supabaseConfig.hasServiceKey ? 'bg-emerald-400' : 'bg-red-400'}`} />
+                )}
+              </div>
               <p className="text-xs font-mono truncate">
-                {process.env.SUPABASE_SERVICE_ROLE_KEY ? '••••••••••••' : 'Not set'}
+                {supabaseConfig?.hasServiceKey ? '••••••••••••' : 'Not set'}
               </p>
             </div>
           </div>
