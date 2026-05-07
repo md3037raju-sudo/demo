@@ -73,6 +73,7 @@ import {
   X,
   Activity,
   TrendingUp,
+  AlertTriangle,
 } from 'lucide-react'
 
 // ─── Form default ────────────────────────────────────────────────
@@ -709,12 +710,19 @@ export function AdminPlans() {
                     <HardDrive className="size-3.5 text-emerald-500 shrink-0" />
                     <span>Bandwidth: <span className="font-medium">{plan.bandwidthLimit}</span></span>
                   </div>
-                  {presetName && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Wifi className="size-3.5 text-emerald-500 shrink-0" />
-                      <span>Preset: <span className="font-medium">{presetName}</span></span>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-2 text-sm">
+                    {presetName ? (
+                      <>
+                        <Wifi className="size-3.5 text-emerald-500 shrink-0" />
+                        <span>Preset: <span className="font-medium">{presetName}</span></span>
+                      </>
+                    ) : (
+                      <>
+                        <AlertTriangle className="size-3.5 text-amber-500 shrink-0" />
+                        <span className="text-amber-600 dark:text-amber-400">Preset: <span className="font-medium">Not assigned</span></span>
+                      </>
+                    )}
+                  </div>
                 </div>
 
                 <Separator />
@@ -1014,14 +1022,47 @@ export function AdminPlans() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
+                  <SelectItem value="none">None (No preset)</SelectItem>
                   {mockProxyPresets.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
-                      {p.name}
+                      {p.name} — {p.subgroups.length} subgroup{p.subgroups.length !== 1 ? 's' : ''}, {p.assignedUsers} users
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {planForm.proxyPresetId === 'none' && (
+                <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 mt-1">
+                  <AlertTriangle className="size-4 text-amber-500 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-amber-600 dark:text-amber-400">No Proxy Preset Assigned</p>
+                    <p className="text-xs text-muted-foreground">
+                      Users who subscribe to this plan will <span className="font-medium text-amber-600 dark:text-amber-400">not be assigned to any proxy group or nodes</span>.
+                      They will need manual configuration or will receive default/generic proxies.
+                      It&apos;s recommended to assign a preset for a better user experience.
+                    </p>
+                  </div>
+                </div>
+              )}
+              {planForm.proxyPresetId !== 'none' && (() => {
+                const preset = mockProxyPresets.find((p) => p.id === planForm.proxyPresetId)
+                if (!preset) return null
+                return (
+                  <div className="flex items-start gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 mt-1">
+                    <Wifi className="size-4 text-emerald-500 shrink-0 mt-0.5" />
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">{preset.name}</p>
+                      <p className="text-xs text-muted-foreground">{preset.description}</p>
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        {preset.subgroups.map((sg) => (
+                          <Badge key={sg.id} variant="secondary" className="text-[10px]">
+                            {sg.name} ({sg.proxyIds.length} prox{sg.proxyIds.length !== 1 ? 'ies' : 'y'})
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })()}
             </div>
 
             {/* Features */}

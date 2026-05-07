@@ -6,6 +6,7 @@ import {
   mockSubscriptions,
   mockActiveDevices,
   mockPlans,
+  mockProxyPresets,
   type Coupon,
   type Plan,
   type PlanDuration,
@@ -59,6 +60,7 @@ import {
   HardDrive,
   ChevronRight,
   Sparkles,
+  AlertTriangle,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { AnimateIn } from '@/components/shared/animate-in'
@@ -534,6 +536,23 @@ export function OverviewPage() {
                                       {plan.bandwidthLimit}
                                     </Badge>
                                   </span>
+                                  <span className="flex items-center gap-1">
+                                    {plan.proxyPresetId ? (
+                                      <>
+                                        <Globe className="size-3.5 text-emerald-400" />
+                                        <Badge variant="outline" className="text-xs border-emerald-500/30 text-emerald-400">
+                                          {mockProxyPresets.find((p) => p.id === plan.proxyPresetId)?.name ?? 'Unknown'}
+                                        </Badge>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <AlertTriangle className="size-3.5 text-amber-400" />
+                                        <Badge variant="outline" className="text-xs border-amber-500/30 text-amber-400">
+                                          No Preset
+                                        </Badge>
+                                      </>
+                                    )}
+                                  </span>
                                 </div>
                               </div>
                               <div className="flex items-center gap-4">
@@ -717,6 +736,18 @@ export function OverviewPage() {
                         {selectedPlan.bandwidthLimit}
                       </Badge>
                     </div>
+                    <div className="text-muted-foreground">Proxy Preset</div>
+                    <div className="text-right font-medium">
+                      {selectedPlan.proxyPresetId ? (
+                        <Badge variant="outline" className="text-xs border-emerald-500/30 text-emerald-400">
+                          {mockProxyPresets.find((p) => p.id === selectedPlan.proxyPresetId)?.name ?? 'Unknown'}
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-xs border-amber-500/30 text-amber-400">
+                          Not assigned
+                        </Badge>
+                      )}
+                    </div>
                     <div className="text-muted-foreground">Devices</div>
                     <div className="text-right font-medium">
                       {selectedDevices} device{selectedDevices > 1 ? 's' : ''}
@@ -724,6 +755,19 @@ export function OverviewPage() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* No Preset Warning */}
+              {!selectedPlan.proxyPresetId && (
+                <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+                  <AlertTriangle className="size-4 text-amber-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-amber-600 dark:text-amber-400">No Proxy Preset Assigned</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      This plan does not have a proxy preset. You will need to manually configure your proxy connection after purchase.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Price Breakdown */}
               <Card className="border-border/50">
