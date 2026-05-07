@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react'
 import { useAuthStore } from '@/lib/auth-store'
-import { mockSubscriptions, mockActiveDevices, mockPlans, mockCoupons, type Coupon } from '@/lib/mock-data'
+import { mockSubscriptions, mockActiveDevices, mockPlans, type Coupon } from '@/lib/mock-data'
+import { useCouponStore } from '@/lib/coupon-store'
 import { useNavigationStore } from '@/lib/navigation-store'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -94,6 +95,7 @@ export function OverviewPage() {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>(mockSubscriptions)
 
   // Coupon state
+  const couponStore = useCouponStore()
   const [couponInput, setCouponInput] = useState('')
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null)
   const [couponError, setCouponError] = useState('')
@@ -137,78 +139,21 @@ export function OverviewPage() {
 
     if (!selectedPlan) return
 
-    const code = couponInput.trim().toUpperCase()
-    const coupon = mockCoupons.find((c) => c.code === code)
-
-    if (!coupon) {
-      setCouponError('Invalid coupon code')
-      setAppliedCoupon(null)
-      setCouponDiscount(0)
-      return
-    }
-
-    if (!coupon.isActive) {
-      setCouponError('This coupon is no longer active')
-      setAppliedCoupon(null)
-      setCouponDiscount(0)
-      return
-    }
-
-    if (new Date(coupon.expiresAt) < new Date()) {
-      setCouponError('This coupon has expired')
-      setAppliedCoupon(null)
-      setCouponDiscount(0)
-      return
-    }
-
-    if (coupon.currentClaims >= coupon.maxClaims) {
-      setCouponError('This coupon has reached its maximum claims')
-      setAppliedCoupon(null)
-      setCouponDiscount(0)
-      return
-    }
-
-    // Check if user already claimed
     const userId = user?.id ?? 'usr_cx_001'
-    if (coupon.claimedBy.some((c) => c.userId === userId)) {
-      setCouponError('You have already used this coupon')
+    const result = couponStore.validateCoupon(couponInput.trim(), userId, selectedPlan.id, selectedPlan.price)
+
+    if (!result.valid) {
+      setCouponError(result.error || 'Invalid coupon')
       setAppliedCoupon(null)
       setCouponDiscount(0)
       return
     }
 
-    // Check applicable plans
-    if (coupon.applicablePlans.length > 0 && !coupon.applicablePlans.includes(selectedPlan.id)) {
-      setCouponError('This coupon is not applicable to the selected plan')
-      setAppliedCoupon(null)
-      setCouponDiscount(0)
-      return
-    }
-
-    // Check min purchase
-    if (selectedPlan.price < coupon.minPurchase) {
-      setCouponError(`Minimum purchase of $${coupon.minPurchase.toFixed(2)} required`)
-      setAppliedCoupon(null)
-      setCouponDiscount(0)
-      return
-    }
-
-    // Calculate discount
-    let discount = 0
-    if (coupon.type === 'percentage') {
-      discount = selectedPlan.price * (coupon.value / 100)
-      if (coupon.maxDiscount > 0) {
-        discount = Math.min(discount, coupon.maxDiscount)
-      }
-    } else {
-      discount = Math.min(coupon.value, selectedPlan.price)
-    }
-
-    setAppliedCoupon(coupon)
-    setCouponDiscount(discount)
+    setAppliedCoupon(result.coupon || null)
+    setCouponDiscount(result.discount || 0)
     setCouponError('')
     toast.success('Coupon applied!', {
-      description: `You save $${discount.toFixed(2)} on this purchase.`,
+      description: `You save $${(result.discount || 0).toFixed(2)} on this purchase.`,
     })
   }
 
@@ -230,6 +175,11 @@ export function OverviewPage() {
 
     // Deduct balance
     deductBalance(finalPrice)
+
+    // Claim coupon if applied
+    if (appliedCoupon && couponDiscount > 0) {
+      couponStore.claimCoupon(appliedCoupon.id, user?.id ?? 'usr_cx_001', user?.name ?? 'User', couponDiscount)
+    }
 
     // Create new subscription
     const now = new Date()

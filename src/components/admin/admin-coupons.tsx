@@ -63,7 +63,8 @@ import {
   DollarSign,
   BarChart3,
 } from 'lucide-react'
-import { mockCoupons, mockPlans, type Coupon } from '@/lib/mock-data'
+import { mockPlans, type Coupon } from '@/lib/mock-data'
+import { useCouponStore } from '@/lib/coupon-store'
 import { toast } from 'sonner'
 
 function generateCouponCode(): string {
@@ -77,7 +78,7 @@ function generateCouponCode(): string {
 }
 
 export function AdminCoupons() {
-  const [coupons, setCoupons] = useState<Coupon[]>([...mockCoupons])
+  const { coupons, addCoupon, updateCoupon, deleteCoupon, deleteCoupons, deactivateCoupons, toggleActive } = useCouponStore()
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
@@ -196,10 +197,10 @@ export function AdminCoupons() {
     }
 
     if (editingCoupon) {
-      setCoupons((prev) => prev.map((c) => (c.id === editingCoupon.id ? couponData : c)))
+      updateCoupon(editingCoupon.id, couponData)
       toast.success('Coupon updated', { description: `${couponData.code} has been updated.` })
     } else {
-      setCoupons((prev) => [couponData, ...prev])
+      addCoupon(couponData)
       toast.success('Coupon created', { description: `${couponData.code} has been created.` })
     }
 
@@ -207,17 +208,15 @@ export function AdminCoupons() {
   }
 
   const handleToggleActive = (id: string) => {
-    setCoupons((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, isActive: !c.isActive } : c))
-    )
     const coupon = coupons.find((c) => c.id === id)
+    toggleActive(id)
     toast.success(coupon?.isActive ? 'Coupon deactivated' : 'Coupon activated', {
       description: `${coupon?.code} has been ${coupon?.isActive ? 'deactivated' : 'activated'}.`,
     })
   }
 
   const handleDeleteCoupon = (id: string) => {
-    setCoupons((prev) => prev.filter((c) => c.id !== id))
+    deleteCoupon(id)
     setSelectedIds((prev) => {
       const next = new Set(prev)
       next.delete(id)
@@ -228,16 +227,14 @@ export function AdminCoupons() {
   }
 
   const handleBulkDelete = () => {
-    setCoupons((prev) => prev.filter((c) => !selectedIds.has(c.id)))
+    deleteCoupons(Array.from(selectedIds))
     setSelectedIds(new Set())
     setBulkDeleteOpen(false)
     toast.success(`${selectedIds.size} coupons deleted`)
   }
 
   const handleBulkDeactivate = () => {
-    setCoupons((prev) =>
-      prev.map((c) => (selectedIds.has(c.id) ? { ...c, isActive: false } : c))
-    )
+    deactivateCoupons(Array.from(selectedIds))
     setSelectedIds(new Set())
     setBulkDeactivateOpen(false)
     toast.success('Selected coupons deactivated')
