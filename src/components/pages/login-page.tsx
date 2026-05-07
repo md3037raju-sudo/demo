@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Shield, ArrowLeft, KeyRound, UserCog, User, Lock, ArrowRight } from 'lucide-react'
+import { Shield, ArrowLeft, KeyRound, UserCog, User, Lock, ArrowRight, Gift, SkipForward } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -19,6 +19,7 @@ import {
 import { useNavigationStore } from '@/lib/navigation-store'
 import { useAuthStore } from '@/lib/auth-store'
 import { use2FAStore } from '@/lib/2fa-store'
+import { useReferralStore } from '@/lib/referral-store'
 
 function GoogleIcon() {
   return (
@@ -57,6 +58,7 @@ export function LoginPage() {
   const loginAsAdmin = useAuthStore((s) => s.loginAsAdmin)
   const loginAsUser = useAuthStore((s) => s.loginAsUser)
   const { isEnabled: is2FAEnabled, isVerified: is2FAVerified, verifyCode: verify2FACode } = use2FAStore()
+  const { applyReferralCode, settings } = useReferralStore()
 
   const [adminDialogOpen, setAdminDialogOpen] = useState(false)
   const [twoFADialogOpen, setTwoFADialogOpen] = useState(false)
@@ -65,12 +67,19 @@ export function LoginPage() {
   const [useBackupCode, setUseBackupCode] = useState(false)
   const [backupCodeInput, setBackupCodeInput] = useState('')
 
+  // Referral code state
+  const [referralDialogOpen, setReferralDialogOpen] = useState(false)
+  const [referralCodeInput, setReferralCodeInput] = useState('')
+  const [referralError, setReferralError] = useState('')
+  const [referralSuccess, setReferralSuccess] = useState(false)
+
   const handleLogin = (provider: 'google' | 'telegram') => {
     const role = login(provider)
     if (role === 'admin') {
       setAdminDialogOpen(true)
     } else {
-      navigate('dashboard')
+      // Show referral code dialog for regular users
+      setReferralDialogOpen(true)
     }
   }
 
@@ -96,7 +105,8 @@ export function LoginPage() {
   const handleLoginAsUser = () => {
     loginAsUser()
     setAdminDialogOpen(false)
-    navigate('dashboard')
+    // Show referral dialog for admin-choosing-user too
+    setReferralDialogOpen(true)
   }
 
   const handle2FAVerify = () => {
@@ -124,6 +134,32 @@ export function LoginPage() {
     setUseBackupCode(false)
     setBackupCodeInput('')
     setAdminDialogOpen(true)
+  }
+
+  const handleApplyReferral = () => {
+    if (!referralCodeInput.trim()) {
+      setReferralError('Please enter a referral code')
+      return
+    }
+
+    const user = useAuthStore.getState().user
+    if (!user) return
+
+    const result = applyReferralCode(referralCodeInput.trim(), user.id, user.name)
+    if (result.success) {
+      setReferralSuccess(true)
+      setReferralError('')
+    } else {
+      setReferralError(result.error || 'Invalid referral code')
+    }
+  }
+
+  const handleSkipReferral = () => {
+    setReferralDialogOpen(false)
+    setReferralCodeInput('')
+    setReferralError('')
+    setReferralSuccess(false)
+    navigate('dashboard')
   }
 
   return (
@@ -368,6 +404,68 @@ export function LoginPage() {
               <ArrowRight className="size-4" />
               Verify
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Referral Code Dialog */}
+      <Dialog open={referralDialogOpen} onOpenChange={(open) => { if (!open) handleSkipReferral() }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <div className="flex items-center justify-center size-8 rounded-lg bg-primary/10">
+                <Gift className="size-4 text-primary" />
+              </div>
+              {referralSuccess ? 'Welcome Bonus Applied!' : 'Have a Referral Code?'}
+            </DialogTitle>
+            <DialogDescription>
+              {referralSuccess
+                ? `A welcome bonus of $${settings.referredReward.toFixed(2)} has been added to your account!`
+                : `Enter a referral code to receive a $${settings.referredReward.toFixed(2)} welcome bonus. You can skip this step and add a code later from your dashboard.`}
+            </DialogDescription>
+          </DialogHeader>
+
+          {!referralSuccess ? (
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label className="text-sm">Referral Code</Label>
+                <Input
+                  value={referralCodeInput}
+                  onChange={(e) => {
+                    setReferralCodeInput(e.target.value.toUpperCase())
+                    setReferralError('')
+                  }}
+                  placeholder="e.g., COREX-7K9M2"
+                  className="font-mono"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleApplyReferral()
+                  }}
+                />
+                {referralError && (
+                  <p className="text-sm text-red-400">{referralError}</p>
+                )}
+              </div>
+            </div>
+          ) : null}
+
+          <DialogFooter className="gap-2 sm:gap-2">
+            {!referralSuccess ? (
+              <>
+                <Button variant="ghost" onClick={handleSkipReferral} className="gap-1.5">
+                  <SkipForward className="size-4" />
+                  Skip
+                </Button>
+                <Button onClick={handleApplyReferral} className="gap-1.5">
+                  <Gift className="size-4" />
+                  Apply Code
+                </Button>
+              </>
+            ) : (
+              <Button onClick={handleSkipReferral} className="gap-1.5">
+                <ArrowRight className="size-4" />
+                Continue to Dashboard
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

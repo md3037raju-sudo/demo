@@ -8,6 +8,7 @@ import { Separator } from '@/components/ui/separator'
 import { Button } from '@/components/ui/button'
 import { useNavigationStore, type Page } from '@/lib/navigation-store'
 import { mockActivityLogs } from '@/lib/mock-data'
+import { useReferralStore } from '@/lib/referral-store'
 import {
   Users,
   CreditCard,
@@ -18,6 +19,7 @@ import {
   Clock,
   MessageSquare,
   ArrowRight,
+  Gift,
 } from 'lucide-react'
 import {
   LineChart,
@@ -100,6 +102,10 @@ function BarTooltip({ active, payload, label }: { active?: boolean; payload?: Ar
 export function AdminDashboard() {
   const { navigate } = useNavigationStore()
   const recentLogs = mockActivityLogs.slice(0, 5)
+  const { referrals } = useReferralStore()
+
+  const totalReferrals = referrals.length
+  const totalRewardsGiven = referrals.reduce((sum, r) => sum + r.referrerReward + r.referredReward, 0)
 
   const getLogTypeIcon = (type: string) => {
     switch (type) {
@@ -166,15 +172,14 @@ export function AdminDashboard() {
           <CardContent className="pt-0">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Total Revenue</p>
-                <p className="text-3xl font-bold">$1,247<span className="text-lg">.50</span></p>
-                <p className="text-xs text-emerald-500 flex items-center gap-1">
-                  <TrendingUp className="size-3" />
-                  +15.3% from last month
+                <p className="text-sm text-muted-foreground">Total Referrals</p>
+                <p className="text-3xl font-bold">{totalReferrals}</p>
+                <p className="text-xs text-muted-foreground">
+                  Rewards: <span className="text-emerald-500 font-medium">${totalRewardsGiven.toFixed(2)}</span>
                 </p>
               </div>
-              <div className="flex size-12 items-center justify-center rounded-xl bg-amber-500/10">
-                <DollarSign className="size-6 text-amber-500" />
+              <div className="flex size-12 items-center justify-center rounded-xl bg-primary/10">
+                <Gift className="size-6 text-primary" />
               </div>
             </div>
           </CardContent>
@@ -184,14 +189,15 @@ export function AdminDashboard() {
           <CardContent className="pt-0">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Active Devices</p>
-                <p className="text-3xl font-bold">3</p>
-                <p className="text-xs text-muted-foreground">
-                  Across all users
+                <p className="text-sm text-muted-foreground">Total Revenue</p>
+                <p className="text-3xl font-bold">$1,247<span className="text-lg">.50</span></p>
+                <p className="text-xs text-emerald-500 flex items-center gap-1">
+                  <TrendingUp className="size-3" />
+                  +15.3% from last month
                 </p>
               </div>
-              <div className="flex size-12 items-center justify-center rounded-xl bg-cyan-500/10">
-                <Smartphone className="size-6 text-cyan-500" />
+              <div className="flex size-12 items-center justify-center rounded-xl bg-amber-500/10">
+                <DollarSign className="size-6 text-amber-500" />
               </div>
             </div>
           </CardContent>

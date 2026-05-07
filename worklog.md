@@ -115,4 +115,26 @@
 ### Modified Files
 - **overview-page.tsx**: Added coupon support to Confirm Purchase dialog — "Have a coupon code?" section with input + Apply button; validates against mockCoupons (active, not expired, claims < max, user not already claimed, plan applicable, meets min purchase); valid coupon shows green "Coupon applied!" badge with savings; invalid shows red error; calculates percentage discount (capped at maxDiscount) or fixed discount (capped at price); shows original price crossed out + discounted price + savings amount; deducted amount from balance uses discounted price; coupon can be removed with X button
 
+## Task h1: Referral Tracking System ✅
+
+### New Files
+- **referral-store.ts**: Zustand store for referral tracking — `ReferralEntry` interface (id, referrerId/Name, referredUserId/Name, referralCode, referredAt, referrerReward, referredReward, status); `ReferralSettings` interface (referrerReward, referredReward, minWithdrawal, commissionType, commissionValue); `applyReferralCode()` validates code against known referrer codes, prevents self-referral and duplicate use; `updateSettings()` updates store; `getReferralsByUser()` filters by referrerId; `getTotalEarnings()` sums completed referral rewards; 5 mock referral entries with different users; default settings: referrerReward: 5, referredReward: 5, minWithdrawal: 10, commissionType: 'fixed', commissionValue: 5
+
+### Modified Files
+- **referrals-page.tsx**: Replaced mock data with `useReferralStore`; added "Enter Referral Code" section at top (visible only if user hasn't been referred yet) with Input + Apply button that validates against store and shows welcome bonus dialog on success; referral code card uses auth store's `referralCode`; stats now show Total Referrals from `getReferralsByUser()`, Total Earnings from `getTotalEarnings()`, and Withdraw Earnings card with min withdrawal check; recent referrals table uses store data; added Withdraw Dialog and Referral Success Dialog
+- **login-page.tsx**: After successful Google/Telegram login for regular users, shows optional "Have a Referral Code?" dialog with input field, Apply button, and Skip button; on success shows "Welcome Bonus Applied!" message with dollar amount from store settings; admin login flow unchanged (admin choice dialog → 2FA if needed → admin panel); admin choosing "Login as User" also gets referral dialog
+- **admin-rules.tsx**: Referral Settings section now uses `useReferralStore` settings; replaced old local state (commissionPercent, maxCommissionPerReferral) with store-synced state (referrerReward, referredReward, minWithdrawal, commissionType, commissionValue); Save button calls `updateReferralSettings()` to persist to store; added field descriptions and commission value field with dynamic $/% suffix based on commission type
+- **admin-dashboard.tsx**: Replaced "Active Devices" stat card with "Total Referrals" card showing count from `useReferralStore().referrals` and total rewards given (sum of referrerReward + referredReward for all referrals); imported `Gift` icon and `useReferralStore`
+
+## Task h2: Theme Engine with Light/Dark + Presets + Animations ✅
+
+### New Files
+- **theme-store.ts**: Zustand store for theme management — `ThemeMode` ('dark'|'light'), `ThemePreset` ('emerald'|'ocean'|'rose'|'midnight'), `animationsEnabled` boolean; `setMode()`, `toggleMode()`, `setPreset()`, `setAnimationsEnabled()` all call `applyThemeToDOM()` which updates: `document.documentElement.classList` for dark/light, `data-theme` attribute for preset, `animate-enabled` class for animations; initial theme applied on load
+- **theme-page.tsx**: Full theme management page with 4 sections: (1) Appearance — Light/Dark toggle buttons with Sun/Moon icons and descriptions; (2) Theme Presets — 4 clickable cards (Emerald/Ocean/Rose/Midnight) with gradient color preview, name, description, color dots, active indicator with Check icon and "Active" badge; (3) Animations — Switch toggle with description, side-by-side comparison of "Animations On" vs "Animations Off" effects; (4) Live Preview — Card showing Buttons (all variants), Badges (default/secondary/outline/success/warning/error), Typography (heading/body/primary text), Cards (muted/primary), and current theme info summary
+
+### Modified Files
+- **navigation-store.ts**: Added `'dashboard/themes'` to `Page` type union and `allValidPages` array
+- **dashboard-layout.tsx**: Added `Palette` icon import; added `ThemePage` import; added `{ label: 'Themes', icon: Palette, page: 'dashboard/themes' }` to `mainNavItems`; added `'dashboard/themes'` case to `getPageTitle()` returning 'Themes' and `renderPage()` returning `<ThemePage />`
+- **globals.css**: Added theme preset CSS variable overrides for Ocean (hue 220), Rose (hue 350), Midnight (hue 290) — each with light and dark mode variants overriding `--primary`, `--primary-foreground`, `--ring`, `--chart-1/2/3`, `--corex`, `--corex-foreground`; added animation system: `.animate-enabled *` with 150ms transitions, `.animate-fade-in`, `.animate-slide-up`, `.animate-scale-in` keyframe animations (fadeIn, slideUp, scaleIn), `:not(.animate-enabled) *` with 0ms transition/animation override
+
 ## Status: All lint passing, dev server running on port 3000

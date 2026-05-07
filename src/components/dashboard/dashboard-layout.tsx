@@ -33,6 +33,7 @@ import {
   LogOut,
   Menu,
   Shield,
+  Palette,
 } from 'lucide-react'
 import { OverviewPage } from './overview-page'
 import { SubscriptionsPage } from './subscriptions-page'
@@ -40,6 +41,7 @@ import { ActiveDevicesPage } from './active-devices-page'
 import { PaymentsPage } from './payments-page'
 import { ReferralsPage } from './referrals-page'
 import { SettingsPage } from './settings-page'
+import { ThemePage } from './theme-page'
 
 interface NavItem {
   label: string
@@ -53,6 +55,7 @@ const mainNavItems: NavItem[] = [
   { label: 'Active Devices', icon: Smartphone, page: 'dashboard/activedevices' },
   { label: 'Payments', icon: Wallet, page: 'dashboard/payments' },
   { label: 'Referrals', icon: Users, page: 'dashboard/referrals' },
+  { label: 'Themes', icon: Palette, page: 'dashboard/themes' },
   { label: 'Settings', icon: Settings, page: 'dashboard/settings' },
 ]
 
@@ -73,6 +76,8 @@ function getPageTitle(page: string): string {
       return 'Payments'
     case 'dashboard/referrals':
       return 'Referrals'
+    case 'dashboard/themes':
+      return 'Themes'
     case 'dashboard/settings':
       return 'Settings'
     default:
@@ -92,6 +97,8 @@ function renderPage(page: string) {
       return <PaymentsPage />
     case 'dashboard/referrals':
       return <ReferralsPage />
+    case 'dashboard/themes':
+      return <ThemePage />
     case 'dashboard/settings':
       return <SettingsPage />
     default:

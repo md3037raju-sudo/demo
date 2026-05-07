@@ -37,6 +37,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Admin2faSettings } from './admin-2fa-settings'
+import { useReferralStore } from '@/lib/referral-store'
 
 interface Alert {
   id: string
@@ -66,11 +67,13 @@ export function AdminRules() {
   )
   const [maintenanceDowntime, setMaintenanceDowntime] = useState('2 hours')
 
-  // Referral Settings
-  const [commissionPercent, setCommissionPercent] = useState('5')
-  const [minWithdrawal, setMinWithdrawal] = useState('10')
-  const [maxCommissionPerReferral, setMaxCommissionPerReferral] = useState('5')
-  const [commissionType, setCommissionType] = useState('percentage')
+  // Referral Settings — synced with referral store
+  const { settings: referralSettings, updateSettings: updateReferralSettings } = useReferralStore()
+  const [referrerReward, setReferrerReward] = useState(String(referralSettings.referrerReward))
+  const [referredReward, setReferredReward] = useState(String(referralSettings.referredReward))
+  const [minWithdrawal, setMinWithdrawal] = useState(String(referralSettings.minWithdrawal))
+  const [commissionType, setCommissionType] = useState(referralSettings.commissionType)
+  const [commissionValue, setCommissionValue] = useState(String(referralSettings.commissionValue))
 
   // Global Alerts
   const [alerts, setAlerts] = useState<Alert[]>(initialAlerts)
@@ -103,8 +106,15 @@ export function AdminRules() {
   }
 
   const handleSaveReferralSettings = () => {
+    updateReferralSettings({
+      referrerReward: parseFloat(referrerReward) || 0,
+      referredReward: parseFloat(referredReward) || 0,
+      minWithdrawal: parseFloat(minWithdrawal) || 0,
+      commissionType: commissionType as 'fixed' | 'percentage',
+      commissionValue: parseFloat(commissionValue) || 0,
+    })
     toast.success('Referral settings saved', {
-      description: `Commission: ${commissionType === 'percentage' ? commissionPercent + '%' : '$' + commissionPercent}, Min withdrawal: $${minWithdrawal}`,
+      description: `Referrer: $${referrerReward}, New user: $${referredReward}, Min withdrawal: $${minWithdrawal}`,
     })
   }
 
@@ -261,19 +271,36 @@ export function AdminRules() {
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label>Commission Percentage</Label>
+              <Label>Referrer Reward</Label>
               <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                  $
+                </span>
                 <Input
                   type="number"
-                  value={commissionPercent}
-                  onChange={(e) => setCommissionPercent(e.target.value)}
+                  value={referrerReward}
+                  onChange={(e) => setReferrerReward(e.target.value)}
+                  className="pl-7"
                   min="0"
-                  max="100"
                 />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-                  %
-                </span>
               </div>
+              <p className="text-xs text-muted-foreground">Amount referrer earns per successful referral</p>
+            </div>
+            <div className="space-y-2">
+              <Label>New User Reward</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                  $
+                </span>
+                <Input
+                  type="number"
+                  value={referredReward}
+                  onChange={(e) => setReferredReward(e.target.value)}
+                  className="pl-7"
+                  min="0"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">Welcome bonus for new users with a referral code</p>
             </div>
             <div className="space-y-2">
               <Label>Minimum Withdrawal Amount</Label>
@@ -289,21 +316,7 @@ export function AdminRules() {
                   min="0"
                 />
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Max Commission Per Referral</Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-                  $
-                </span>
-                <Input
-                  type="number"
-                  value={maxCommissionPerReferral}
-                  onChange={(e) => setMaxCommissionPerReferral(e.target.value)}
-                  className="pl-7"
-                  min="0"
-                />
-              </div>
+              <p className="text-xs text-muted-foreground">Minimum earnings before withdrawal is allowed</p>
             </div>
             <div className="space-y-2">
               <Label>Commission Type</Label>
@@ -312,10 +325,45 @@ export function AdminRules() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="percentage">Percentage</SelectItem>
                   <SelectItem value="fixed">Fixed Amount</SelectItem>
+                  <SelectItem value="percentage">Percentage</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Commission Value</Label>
+              <div className="relative">
+                {commissionType === 'percentage' ? (
+                  <>
+                    <Input
+                      type="number"
+                      value={commissionValue}
+                      onChange={(e) => setCommissionValue(e.target.value)}
+                      min="0"
+                      max="100"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                      %
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                      $
+                    </span>
+                    <Input
+                      type="number"
+                      value={commissionValue}
+                      onChange={(e) => setCommissionValue(e.target.value)}
+                      className="pl-7"
+                      min="0"
+                    />
+                  </>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {commissionType === 'percentage' ? 'Percentage of referred user\'s first payment' : 'Fixed amount per referral'}
+              </p>
             </div>
           </div>
 
