@@ -46,6 +46,7 @@ import {
 } from 'lucide-react'
 import { ThemeToggle } from '@/components/shared/theme-toggle'
 import { AnimateIn } from '@/components/shared/animate-in'
+import { CoreXLogo } from '@/components/shared/corex-logo'
 import { AdminDashboard } from './admin-dashboard'
 import { AdminUsers } from './admin-users'
 import { AdminSubscriptions } from './admin-subscriptions'
@@ -210,11 +211,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
       {/* Logo */}
       <div className="flex items-center gap-2 px-4 py-4">
-        <div className="flex size-8 items-center justify-center rounded-lg bg-primary">
-          <Shield className="size-5 text-primary-foreground" />
-        </div>
-        <span className="text-lg font-bold tracking-tight">CoreX Admin</span>
-        <Badge className="ml-auto bg-red-500/20 text-red-400 border-red-500/30 text-xs">Admin</Badge>
+        <CoreXLogo height={28} showAdminBadge />
       </div>
 
       <Separator />

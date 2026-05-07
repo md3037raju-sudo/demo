@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { useNavigationStore } from '@/lib/navigation-store'
+import { CoreXLogo } from '@/components/shared/corex-logo'
 
 function Navbar() {
   const navigate = useNavigationStore((s) => s.navigate)
@@ -34,12 +35,7 @@ function Navbar() {
           onClick={() => navigate('landing')}
           className="flex items-center gap-2.5 hover:opacity-80 transition-opacity"
         >
-          <div className="flex items-center justify-center size-8 rounded-lg bg-primary/10">
-            <Shield className="size-5 text-primary" />
-          </div>
-          <span className="text-lg font-bold tracking-tight text-foreground">
-            CoreX
-          </span>
+          <CoreXLogo height={28} />
         </button>
 
         {/* Nav Links */}
@@ -343,14 +339,7 @@ export function AboutPage() {
       <footer className="border-t border-border/40 bg-background mt-auto">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 py-8">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <div className="flex items-center justify-center size-7 rounded-md bg-primary/10">
-                <Shield className="size-4 text-primary" />
-              </div>
-              <span className="text-sm font-semibold text-foreground">
-                CoreX
-              </span>
-            </div>
+            <CoreXLogo height={24} />
             <div className="flex items-center gap-6">
               {['Privacy', 'Terms', 'Security', 'Contact'].map((link) => (
                 <button

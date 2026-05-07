@@ -21,6 +21,7 @@ import { useAuthStore } from '@/lib/auth-store'
 import { use2FAStore } from '@/lib/2fa-store'
 import { useReferralStore } from '@/lib/referral-store'
 import { AnimateIn } from '@/components/shared/animate-in'
+import { CoreXLogo } from '@/components/shared/corex-logo'
 
 function GoogleIcon() {
   return (
@@ -180,12 +181,7 @@ export function LoginPage() {
         <CardHeader className="items-center text-center gap-4">
           {/* Logo */}
           <div className="flex items-center gap-2.5">
-            <div className="flex items-center justify-center size-10 rounded-lg bg-primary/10">
-              <Shield className="size-6 text-primary" />
-            </div>
-            <span className="text-xl font-bold tracking-tight text-foreground">
-              CoreX
-            </span>
+            <CoreXLogo height={36} showText />
           </div>
 
           <div className="space-y-1.5 pt-2">

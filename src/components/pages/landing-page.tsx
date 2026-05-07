@@ -37,6 +37,7 @@ import {
 } from 'lucide-react'
 import { ThemeToggle } from '@/components/shared/theme-toggle'
 import { AnimateIn } from '@/components/shared/animate-in'
+import { CoreXLogo } from '@/components/shared/corex-logo'
 
 export function LandingPage() {
   const navigate = useNavigationStore((s) => s.navigate)
@@ -67,10 +68,7 @@ export function LandingPage() {
             onClick={() => navigate('landing')}
             className="flex items-center gap-2 transition-opacity hover:opacity-80"
           >
-            <Shield className="size-7 text-primary" />
-            <span className="text-xl font-bold tracking-tight">
-              Core<span className="text-primary">X</span>
-            </span>
+            <CoreXLogo height={32} />
           </button>
 
           {/* Desktop Navigation */}
@@ -115,8 +113,7 @@ export function LandingPage() {
             <SheetContent side="right" className="w-72">
               <SheetHeader>
                 <SheetTitle className="flex items-center gap-2">
-                  <Shield className="size-5 text-primary" />
-                  Core<span className="text-primary">X</span>
+                  <CoreXLogo height={24} />
                 </SheetTitle>
               </SheetHeader>
               <nav className="flex flex-col gap-1 px-4 pt-4">
@@ -432,12 +429,7 @@ export function LandingPage() {
           <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
             {/* Brand */}
             <div className="flex flex-col gap-3">
-              <div className="flex items-center gap-2">
-                <Shield className="size-6 text-primary" />
-                <span className="text-lg font-bold tracking-tight">
-                  Core<span className="text-primary">X</span>
-                </span>
-              </div>
+              <CoreXLogo height={28} />
               <p className="max-w-xs text-sm text-muted-foreground">
                 Fast, secure proxy subscriptions for the CoreX app. Browse
                 privately with confidence.

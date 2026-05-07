@@ -3,6 +3,7 @@
 import { Shield, ArrowLeft, Download, CheckCircle2, AlertTriangle, Smartphone, FileCheck, Lock, ChevronRight } from 'lucide-react'
 import { useAuthStore } from '@/lib/auth-store'
 import { useNavigationStore } from '@/lib/navigation-store'
+import { CoreXLogo } from '@/components/shared/corex-logo'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -17,12 +18,7 @@ export function DownloadPage() {
       <div className="min-h-screen flex flex-col bg-background text-foreground">
         <header className="border-b border-border bg-card/50 backdrop-blur-sm">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                <Shield className="w-5 h-5 text-primary-foreground" />
-              </div>
-              <span className="font-semibold text-lg">CoreX</span>
-            </div>
+            <CoreXLogo height={28} />
             <Button variant="ghost" size="sm" onClick={() => navigate('landing')}>
               <ArrowLeft className="w-4 h-4 mr-1" />
               Home
@@ -55,9 +51,7 @@ export function DownloadPage() {
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-              <Shield className="w-5 h-5 text-primary-foreground" />
-            </div>
+            <CoreXLogo height={28} />
             <h1 className="font-semibold text-lg">Download</h1>
           </div>
           <Button variant="outline" size="sm" onClick={() => navigate('dashboard')}>

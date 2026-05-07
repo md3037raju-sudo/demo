@@ -37,6 +37,7 @@ import {
 } from 'lucide-react'
 import { ThemeToggle } from '@/components/shared/theme-toggle'
 import { AnimateIn } from '@/components/shared/animate-in'
+import { CoreXLogo, CoreXLogoIcon } from '@/components/shared/corex-logo'
 import { OverviewPage } from './overview-page'
 import { SubscriptionsPage } from './subscriptions-page'
 import { ActiveDevicesPage } from './active-devices-page'
@@ -135,10 +136,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
       {/* Logo */}
       <div className="flex items-center gap-2 px-4 py-4">
-        <div className="flex size-8 items-center justify-center rounded-lg bg-primary">
-          <Shield className="size-5 text-primary-foreground" />
-        </div>
-        <span className="text-lg font-bold tracking-tight">CoreX</span>
+        <CoreXLogo height={28} />
       </div>
 
       <Separator />

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useMemo } from 'react'
-import { mockSubscriptions, mockPlans, type Plan, type PlanDuration, getDurationLabel, calculateDevicePrice, getPerDeviceCost, getSavingsPercent } from '@/lib/mock-data'
+import { mockSubscriptions, mockPlans, type Plan, type PlanDuration, getDurationLabel, calculateDevicePrice, getPerDeviceCost } from '@/lib/mock-data'
 import { useAuthStore } from '@/lib/auth-store'
 import { useNavigationStore } from '@/lib/navigation-store'
 import { useCouponStore } from '@/lib/coupon-store'
@@ -10,7 +10,6 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import {
   Table,
   TableBody,
@@ -33,20 +32,14 @@ import {
   Wallet,
   Monitor,
   Check,
-  Zap,
-  Star,
-  Clock,
-  Wifi,
-  HardDrive,
-  Globe,
-  ChevronRight,
-  Sparkles,
   AlertCircle,
   ArrowRight,
   Tag,
   X,
   History,
-  ShoppingCart,
+  Clock,
+  Zap,
+  Wifi,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { AnimateIn } from '@/components/shared/animate-in'
@@ -110,8 +103,17 @@ function getDaysLeft(expiryDate: string): number | null {
   return Math.ceil(diff / (1000 * 60 * 60 * 24))
 }
 
-// Duration tab order
-const DURATION_ORDER: PlanDuration[] = ['3d', '7d', '15d', '30d', '6m', '1y']
+// Find the matching plan for a subscription by name
+function findMatchingPlan(subName: string): Plan | null {
+  return mockPlans.find((p) => p.name === subName && p.isActive) ?? null
+}
+
+// Calculate the renewal price for a subscription (same plan, same devices)
+function getRenewalPrice(sub: Subscription): number {
+  const plan = findMatchingPlan(sub.name)
+  if (!plan) return sub.price // fallback to original price
+  return calculateDevicePrice(plan.basePrice, plan.devicePricing, sub.devices ?? 1)
+}
 
 export function SubscriptionsPage() {
   const { user, deductBalance } = useAuthStore()
@@ -128,10 +130,7 @@ export function SubscriptionsPage() {
 
   // Renew flow state
   const [renewDialogOpen, setRenewDialogOpen] = useState(false)
-  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
-  const [renewingSubId, setRenewingSubId] = useState<string | null>(null)
-  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null)
-  const [selectedDevices, setSelectedDevices] = useState(1)
+  const [renewingSub, setRenewingSub] = useState<Subscription | null>(null)
 
   // Coupon state
   const [couponInput, setCouponInput] = useState('')
@@ -146,67 +145,18 @@ export function SubscriptionsPage() {
   const renewableCount = historySubs.filter((s) => s.status === 'renewable').length
   const totalSpent = (mockSubscriptions as Subscription[]).reduce((sum, s) => sum + s.price, 0)
 
-  // Selected plan for renewal
-  const selectedPlan = mockPlans.find((p) => p.id === selectedPlanId) ?? null
+  // Renewal price calculation
+  const renewalPrice = renewingSub ? getRenewalPrice(renewingSub) : 0
+  const matchingPlan = renewingSub ? findMatchingPlan(renewingSub.name) : null
 
-  // Active plans grouped by duration
-  const activePlans = useMemo(() => mockPlans.filter((p) => p.isActive), [])
-  const plansByDuration = useMemo(() => {
-    const grouped: Partial<Record<PlanDuration, Plan[]>> = {}
-    for (const plan of activePlans) {
-      if (!grouped[plan.duration]) grouped[plan.duration] = []
-      grouped[plan.duration]!.push(plan)
-    }
-    return grouped
-  }, [activePlans])
+  const finalPrice = Math.max(0, renewalPrice - couponDiscount)
 
-  const defaultDurationTab = useMemo(() => {
-    for (const d of DURATION_ORDER) {
-      if (plansByDuration[d] && plansByDuration[d]!.length > 0) return d
-    }
-    return '30d'
-  }, [plansByDuration])
-
-  // Live price calculation
-  const totalPrice = selectedPlan
-    ? calculateDevicePrice(selectedPlan.basePrice, selectedPlan.devicePricing, selectedDevices)
-    : 0
-  const perDeviceCost = selectedPlan
-    ? getPerDeviceCost(totalPrice, selectedDevices)
-    : 0
-  const savingsPercent = selectedPlan
-    ? getSavingsPercent(selectedPlan.basePrice, selectedPlan.devicePricing, selectedDevices)
-    : 0
-  const finalPrice = Math.max(0, totalPrice - couponDiscount)
-
-  const handleRenewClick = (subId: string) => {
-    setRenewingSubId(subId)
-    setSelectedPlanId(null)
-    setSelectedDevices(1)
+  const handleRenewClick = (sub: Subscription) => {
+    setRenewingSub(sub)
     setCouponInput('')
     setAppliedCoupon(null)
     setCouponError('')
     setCouponDiscount(0)
-    setRenewDialogOpen(true)
-  }
-
-  const handleSelectPlan = (planId: string) => {
-    setSelectedPlanId(planId)
-    setSelectedDevices(1)
-    setCouponInput('')
-    setAppliedCoupon(null)
-    setCouponError('')
-    setCouponDiscount(0)
-  }
-
-  const handleProceedToCheckout = () => {
-    if (!selectedPlanId) return
-    setRenewDialogOpen(false)
-    setConfirmDialogOpen(true)
-  }
-
-  const handleBackToPlans = () => {
-    setConfirmDialogOpen(false)
     setRenewDialogOpen(true)
   }
 
@@ -215,9 +165,9 @@ export function SubscriptionsPage() {
       setCouponError('Please enter a coupon code')
       return
     }
-    if (!selectedPlan) return
+    if (!matchingPlan) return
     const userId = user?.id ?? 'usr_cx_001'
-    const result = couponStore.validateCoupon(couponInput.trim(), userId, selectedPlan.id, totalPrice)
+    const result = couponStore.validateCoupon(couponInput.trim(), userId, matchingPlan.id, renewalPrice)
     if (!result.valid) {
       setCouponError(result.error || 'Invalid coupon')
       setAppliedCoupon(null)
@@ -228,7 +178,7 @@ export function SubscriptionsPage() {
     setCouponDiscount(result.discount || 0)
     setCouponError('')
     toast.success('Coupon applied!', {
-      description: `You save ৳${(result.discount || 0).toFixed(2)} on this purchase.`,
+      description: `You save ৳${(result.discount || 0).toFixed(2)} on this renewal.`,
     })
   }
 
@@ -239,8 +189,8 @@ export function SubscriptionsPage() {
     setCouponError('')
   }
 
-  const handleConfirmPurchase = () => {
-    if (!selectedPlan) return
+  const handleConfirmRenewal = () => {
+    if (!renewingSub || !matchingPlan) return
     if (balance < finalPrice) return
 
     deductBalance(finalPrice)
@@ -249,49 +199,39 @@ export function SubscriptionsPage() {
       couponStore.claimCoupon(appliedCoupon.id, user?.id ?? 'usr_cx_001', user?.name ?? 'User', couponDiscount)
     }
 
-    // Calculate expiry
+    // Calculate new expiry: from TODAY + plan duration (since it's already expired)
     const now = new Date()
-    const expiry = new Date(now)
-    switch (selectedPlan.duration) {
-      case '3d': expiry.setDate(expiry.getDate() + 3); break
-      case '7d': expiry.setDate(expiry.getDate() + 7); break
-      case '15d': expiry.setDate(expiry.getDate() + 15); break
-      case '30d': expiry.setMonth(expiry.getMonth() + 1); break
-      case '6m': expiry.setMonth(expiry.getMonth() + 6); break
-      case '1y': expiry.setFullYear(expiry.getFullYear() + 1); break
+    const newExpiry = new Date(now)
+    switch (matchingPlan.duration) {
+      case '3d': newExpiry.setDate(newExpiry.getDate() + 3); break
+      case '7d': newExpiry.setDate(newExpiry.getDate() + 7); break
+      case '15d': newExpiry.setDate(newExpiry.getDate() + 15); break
+      case '30d': newExpiry.setMonth(newExpiry.getMonth() + 1); break
+      case '6m': newExpiry.setMonth(newExpiry.getMonth() + 6); break
+      case '1y': newExpiry.setFullYear(newExpiry.getFullYear() + 1); break
     }
 
-    const bwLimit = selectedPlan.bandwidthType === 'unlimited'
-      ? 9999
-      : parseInt(selectedPlan.bandwidthLimit.replace(/[^0-9]/g, '')) || 0
+    // Remove from history (it's now active again)
+    setHistorySubs((prev) => prev.filter((s) => s.id !== renewingSub.id))
 
-    // If renewing, update the existing sub to active; otherwise create new
-    if (renewingSubId) {
-      setHistorySubs((prev) => prev.filter((s) => s.id !== renewingSubId))
-    }
-
-    setConfirmDialogOpen(false)
-    setRenewingSubId(null)
-    setSelectedPlanId(null)
-    setSelectedDevices(1)
-    setAppliedCoupon(null)
+    setRenewDialogOpen(false)
+    setRenewingSub(null)
     setCouponInput('')
+    setAppliedCoupon(null)
     setCouponDiscount(0)
     setCouponError('')
 
     const discountMsg = couponDiscount > 0 ? ` ৳${couponDiscount.toFixed(2)} coupon discount applied.` : ''
     toast.success('Subscription renewed!', {
-      description: `${selectedPlan.name} (${getDurationLabel(selectedPlan.duration)}, ${selectedDevices} device${selectedDevices > 1 ? 's' : ''}) has been activated. ৳${finalPrice.toFixed(2)} deducted.${discountMsg}`,
+      description: `${renewingSub.name} (${getDurationLabel(matchingPlan.duration)}, ${renewingSub.devices ?? 1} device${(renewingSub.devices ?? 1) > 1 ? 's' : ''}) has been reactivated. New expiry: ${newExpiry.toLocaleDateString()}. ৳${finalPrice.toFixed(2)} deducted.${discountMsg}`,
     })
   }
 
   const handleCancelRenew = () => {
-    setConfirmDialogOpen(false)
-    setRenewingSubId(null)
-    setSelectedPlanId(null)
-    setSelectedDevices(1)
-    setAppliedCoupon(null)
+    setRenewDialogOpen(false)
+    setRenewingSub(null)
     setCouponInput('')
+    setAppliedCoupon(null)
     setCouponDiscount(0)
     setCouponError('')
   }
@@ -377,6 +317,7 @@ export function SubscriptionsPage() {
               <TableBody>
                 {historySubs.map((sub) => {
                   const daysLeft = getDaysLeft(sub.expiryDate)
+                  const hasMatchingPlan = !!findMatchingPlan(sub.name)
                   return (
                     <TableRow key={sub.id}>
                       <TableCell className="font-medium">{sub.name}</TableCell>
@@ -412,7 +353,8 @@ export function SubscriptionsPage() {
                           variant="outline"
                           size="sm"
                           className="gap-1.5"
-                          onClick={() => handleRenewClick(sub.id)}
+                          onClick={() => handleRenewClick(sub)}
+                          disabled={!hasMatchingPlan}
                         >
                           <RefreshCw className="size-3.5" />
                           Renew
@@ -434,282 +376,69 @@ export function SubscriptionsPage() {
       </Card>
 
       {/* ============================================================ */}
-      {/* Renew Flow: Plan Selection Dialog                            */}
+      {/* Renew Dialog: Reactivate the SAME subscription               */}
       {/* ============================================================ */}
-      <Dialog open={renewDialogOpen} onOpenChange={setRenewDialogOpen}>
-        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+      <Dialog open={renewDialogOpen} onOpenChange={(open) => { if (!open) handleCancelRenew() }}>
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <RefreshCw className="size-5 text-primary" />
               Renew Subscription
             </DialogTitle>
             <DialogDescription>
-              Choose a new plan to continue your subscription. Your previous configuration will be restored.
+              Reactivate your subscription with the same plan and device configuration. Your expiry date will be extended from today.
             </DialogDescription>
           </DialogHeader>
 
-          <Tabs defaultValue={defaultDurationTab} className="w-full">
-            <TabsList className="flex w-full flex-wrap gap-1 h-auto p-1">
-              {DURATION_ORDER.map((dur) => {
-                const plans = plansByDuration[dur]
-                if (!plans || plans.length === 0) return null
-                return (
-                  <TabsTrigger key={dur} value={dur} className="text-xs px-3 py-1.5">
-                    {getDurationLabel(dur)}
-                  </TabsTrigger>
-                )
-              })}
-            </TabsList>
-
-            {DURATION_ORDER.map((dur) => {
-              const plans = plansByDuration[dur]
-              if (!plans || plans.length === 0) return null
-              return (
-                <TabsContent key={dur} value={dur}>
-                  <div className="grid gap-3 pt-2">
-                    {plans.map((plan) => {
-                      const isSelected = selectedPlanId === plan.id
-                      const baseTotal = calculateDevicePrice(plan.basePrice, plan.devicePricing, 1)
-                      return (
-                        <Card
-                          key={plan.id}
-                          className={`cursor-pointer transition-all group ${
-                            isSelected
-                              ? 'border-primary bg-primary/5 ring-1 ring-primary/30'
-                              : 'border-border/50 hover:border-primary/50 hover:bg-primary/5'
-                          }`}
-                          onClick={() => handleSelectPlan(plan.id)}
-                        >
-                          <CardContent className="p-4 sm:p-5">
-                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                              <div className="space-y-2 flex-1">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <h3 className="font-semibold text-base">{plan.name}</h3>
-                                  {plan.isFeatured && (
-                                    <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 gap-1 text-xs">
-                                      <Star className="size-3" />
-                                      Recommended
-                                    </Badge>
-                                  )}
-                                  <Badge variant="outline" className="text-xs">
-                                    <Clock className="size-3 mr-1" />
-                                    {getDurationLabel(plan.duration)}
-                                  </Badge>
-                                </div>
-                                <p className="text-sm text-muted-foreground">{plan.description}</p>
-                                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                                  <span className="flex items-center gap-1">
-                                    <Zap className="size-3.5 text-amber-400" />
-                                    {plan.speed}
-                                  </span>
-                                  <span className="flex items-center gap-1">
-                                    <Wifi className="size-3.5 text-teal-400" />
-                                    <Badge
-                                      variant="outline"
-                                      className={`text-xs ${
-                                        plan.bandwidthType === 'unlimited'
-                                          ? 'border-emerald-500/30 text-emerald-400'
-                                          : 'border-border text-muted-foreground'
-                                      }`}
-                                    >
-                                      {plan.bandwidthLimit}
-                                    </Badge>
-                                  </span>
-                                  <span className="flex items-center gap-1">
-                                    <Globe className="size-3.5 text-emerald-400" />
-                                    <span className="text-xs text-muted-foreground">Auto-assigned</span>
-                                  </span>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-4">
-                                <div className="text-right">
-                                  <div className="text-xl font-bold">৳{baseTotal.toFixed(2)}</div>
-                                  <div className="text-xs text-muted-foreground">starting / 1 device</div>
-                                </div>
-                                <div className={`rounded-full p-2 transition-colors ${
-                                  isSelected
-                                    ? 'bg-primary text-primary-foreground'
-                                    : 'bg-muted text-muted-foreground group-hover:bg-primary group-hover:text-primary-foreground'
-                                }`}>
-                                  {isSelected ? (
-                                    <Check className="size-4" />
-                                  ) : (
-                                    <ChevronRight className="size-4" />
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      )
-                    })}
-                  </div>
-                </TabsContent>
-              )
-            })}
-          </Tabs>
-
-          {/* Device & Price Configuration */}
-          {selectedPlan && (
-            <div className="space-y-4 pt-4 border-t">
-              <div className="flex items-center gap-2">
-                <HardDrive className="size-4 text-primary" />
-                <span className="font-medium text-sm">Select Number of Devices</span>
-              </div>
-
-              <div className="flex items-center gap-3 justify-center">
-                {([1, 2, 3, 4, 5] as const).map((d) => {
-                  const dPrice = calculateDevicePrice(selectedPlan.basePrice, selectedPlan.devicePricing, d)
-                  const dSavings = getSavingsPercent(selectedPlan.basePrice, selectedPlan.devicePricing, d)
-                  const isDevSelected = selectedDevices === d
-
-                  return (
-                    <button
-                      key={d}
-                      type="button"
-                      onClick={() => setSelectedDevices(d)}
-                      className={`flex flex-col items-center gap-1.5 rounded-xl px-3 py-3 transition-all border-2 min-w-[64px] ${
-                        isDevSelected
-                          ? 'border-primary bg-primary/10 text-primary shadow-sm'
-                          : 'border-border/50 hover:border-primary/40 hover:bg-primary/5 text-muted-foreground'
-                      }`}
-                    >
-                      <div className="flex items-center gap-0.5">
-                        {Array.from({ length: d }).map((_, i) => (
-                          <Monitor key={i} className={`size-3.5 ${isDevSelected ? 'text-primary' : 'text-muted-foreground'}`} />
-                        ))}
-                      </div>
-                      <span className={`text-xs font-semibold ${isDevSelected ? 'text-primary' : 'text-muted-foreground'}`}>
-                        {d} {d === 1 ? 'device' : 'devices'}
-                      </span>
-                      <span className="text-xs font-bold">৳{dPrice.toFixed(0)}</span>
-                      {dSavings > 0 && (
-                        <Badge className="text-[10px] px-1.5 py-0 h-4 bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
-                          Save {dSavings}%
-                        </Badge>
-                      )}
-                    </button>
-                  )
-                })}
-              </div>
-
-              {/* Pricing summary */}
-              <Card className="border-primary/20 bg-primary/5">
-                <CardContent className="p-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold">{selectedPlan.name}</span>
-                        <Badge variant="outline" className="text-xs">
-                          {getDurationLabel(selectedPlan.duration)}
-                        </Badge>
-                        <Badge variant="outline" className="text-xs">
-                          {selectedDevices} device{selectedDevices > 1 ? 's' : ''}
-                        </Badge>
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {selectedDevices > 1
-                          ? `৳${perDeviceCost.toFixed(2)} per device`
-                          : `৳${totalPrice.toFixed(2)} total`
-                        }
-                      </div>
-                    </div>
-                    <div className="text-right space-y-1">
-                      <div className="text-2xl font-bold">৳{totalPrice.toFixed(2)}</div>
-                      {savingsPercent > 0 && (
-                        <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 gap-1">
-                          <Sparkles className="size-3" />
-                          Save {savingsPercent}% per device
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Features */}
-              <div className="space-y-1.5">
-                <span className="text-sm font-medium">Includes:</span>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                  {selectedPlan.features.map((feat, i) => (
-                    <div key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Check className="size-3.5 text-emerald-400 shrink-0" />
-                      {feat}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="ghost" onClick={() => setRenewDialogOpen(false)}>
-              Cancel
-            </Button>
-            {selectedPlan && (
-              <Button className="gap-1.5" onClick={handleProceedToCheckout}>
-                Proceed to Checkout
-                <ArrowRight className="size-4" />
-              </Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ============================================================ */}
-      {/* Confirm Renewal Dialog                                       */}
-      {/* ============================================================ */}
-      <Dialog open={confirmDialogOpen} onOpenChange={(open) => { if (!open) handleCancelRenew() }}>
-        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <RefreshCw className="size-5 text-primary" />
-              Confirm Renewal
-            </DialogTitle>
-            <DialogDescription>
-              Review your renewal selection before completing.
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedPlan && (
+          {renewingSub && matchingPlan && (
             <div className="space-y-4 py-2">
-              {/* Plan Details */}
-              <Card className="border-border/50">
+              {/* Plan Details — same plan, not changeable */}
+              <Card className="border-primary/20 bg-primary/5">
                 <CardContent className="p-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="font-semibold text-lg">{selectedPlan.name}</span>
-                    <Badge variant="outline">{getDurationLabel(selectedPlan.duration)}</Badge>
+                    <span className="font-semibold text-lg">{renewingSub.name}</span>
+                    <Badge variant="outline">{getDurationLabel(matchingPlan.duration)}</Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground">{selectedPlan.description}</p>
+                  <p className="text-sm text-muted-foreground">{matchingPlan.description}</p>
                   <Separator />
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div className="text-muted-foreground">Duration</div>
-                    <div className="text-right font-medium">{getDurationLabel(selectedPlan.duration)}</div>
+                    <div className="text-right font-medium">{getDurationLabel(matchingPlan.duration)}</div>
                     <div className="text-muted-foreground">Speed</div>
-                    <div className="text-right font-medium">{selectedPlan.speed}</div>
+                    <div className="text-right font-medium">{matchingPlan.speed}</div>
                     <div className="text-muted-foreground">Bandwidth</div>
                     <div className="text-right font-medium">
                       <Badge
                         variant="outline"
                         className={`text-xs ${
-                          selectedPlan.bandwidthType === 'unlimited'
+                          matchingPlan.bandwidthType === 'unlimited'
                             ? 'border-emerald-500/30 text-emerald-400'
                             : ''
                         }`}
                       >
-                        {selectedPlan.bandwidthLimit}
-                      </Badge>
-                    </div>
-                    <div className="text-muted-foreground">Server Group</div>
-                    <div className="text-right font-medium">
-                      <Badge variant="outline" className="text-xs border-emerald-500/30 text-emerald-400">
-                        Auto-assigned
+                        {matchingPlan.bandwidthLimit}
                       </Badge>
                     </div>
                     <div className="text-muted-foreground">Devices</div>
                     <div className="text-right font-medium">
-                      {selectedDevices} device{selectedDevices > 1 ? 's' : ''}
+                      {renewingSub.devices ?? 1} device{(renewingSub.devices ?? 1) > 1 ? 's' : ''}
                     </div>
+                  </div>
+                  <div className="flex items-center gap-2 pt-1 text-xs text-muted-foreground">
+                    <Clock className="size-3.5" />
+                    <span>New expiry will be: <strong className="text-foreground">{(() => {
+                      const now = new Date()
+                      const newExpiry = new Date(now)
+                      switch (matchingPlan.duration) {
+                        case '3d': newExpiry.setDate(newExpiry.getDate() + 3); break
+                        case '7d': newExpiry.setDate(newExpiry.getDate() + 7); break
+                        case '15d': newExpiry.setDate(newExpiry.getDate() + 15); break
+                        case '30d': newExpiry.setMonth(newExpiry.getMonth() + 1); break
+                        case '6m': newExpiry.setMonth(newExpiry.getMonth() + 6); break
+                        case '1y': newExpiry.setFullYear(newExpiry.getFullYear() + 1); break
+                      }
+                      return newExpiry.toLocaleDateString()
+                    })()}</strong> (from today)</span>
                   </div>
                 </CardContent>
               </Card>
@@ -723,40 +452,34 @@ export function SubscriptionsPage() {
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Base price (1 device)</span>
-                    <span className="font-medium">৳{calculateDevicePrice(selectedPlan.basePrice, selectedPlan.devicePricing, 1).toFixed(2)}</span>
+                    <span className="font-medium">৳{calculateDevicePrice(matchingPlan.basePrice, matchingPlan.devicePricing, 1).toFixed(2)}</span>
                   </div>
-                  {selectedDevices > 1 && (
+                  {(renewingSub.devices ?? 1) > 1 && (
                     <>
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground">
-                          Device multiplier ({selectedDevices} devices — {selectedPlan.devicePricing[selectedDevices]}% of base)
+                          Device multiplier ({renewingSub.devices} devices — {matchingPlan.devicePricing[renewingSub.devices ?? 1]}% of base)
                         </span>
-                        <span className="font-medium">৳{totalPrice.toFixed(2)}</span>
+                        <span className="font-medium">৳{renewalPrice.toFixed(2)}</span>
                       </div>
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground">Per-device cost</span>
-                        <span className="font-medium">৳{perDeviceCost.toFixed(2)}</span>
+                        <span className="font-medium">৳{getPerDeviceCost(renewalPrice, renewingSub.devices ?? 1).toFixed(2)}</span>
                       </div>
-                      {savingsPercent > 0 && (
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">Multi-device savings</span>
-                          <span className="font-medium text-emerald-400">Save {savingsPercent}%</span>
-                        </div>
-                      )}
                     </>
                   )}
-                  {selectedDevices === 1 && (
+                  {(renewingSub.devices ?? 1) === 1 && (
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Total price</span>
-                      <span className="font-bold text-lg">৳{totalPrice.toFixed(2)}</span>
+                      <span className="font-bold text-lg">৳{renewalPrice.toFixed(2)}</span>
                     </div>
                   )}
-                  {selectedDevices > 1 && (
+                  {(renewingSub.devices ?? 1) > 1 && (
                     <>
                       <Separator />
                       <div className="flex items-center justify-between text-sm">
-                        <span className="font-medium">Total price</span>
-                        <span className="font-bold text-lg">৳{totalPrice.toFixed(2)}</span>
+                        <span className="font-medium">Renewal price</span>
+                        <span className="font-bold text-lg">৳{renewalPrice.toFixed(2)}</span>
                       </div>
                     </>
                   )}
@@ -830,7 +553,7 @@ export function SubscriptionsPage() {
                     <>
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground">Original Price</span>
-                        <span className="line-through text-muted-foreground">৳{totalPrice.toFixed(2)}</span>
+                        <span className="line-through text-muted-foreground">৳{renewalPrice.toFixed(2)}</span>
                       </div>
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground">Coupon Discount</span>
@@ -848,7 +571,7 @@ export function SubscriptionsPage() {
                     <span className="font-semibold">৳{balance.toFixed(2)}</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">After Purchase</span>
+                    <span className="text-muted-foreground">After Renewal</span>
                     <span className={`font-semibold ${balance < finalPrice ? 'text-red-400' : 'text-emerald-400'}`}>
                       ৳{(balance - finalPrice).toFixed(2)}
                     </span>
@@ -867,8 +590,7 @@ export function SubscriptionsPage() {
                           size="sm"
                           className="mt-2 gap-1 border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300"
                           onClick={() => {
-                            setConfirmDialogOpen(false)
-                            setSelectedPlanId(null)
+                            setRenewDialogOpen(false)
                             navigate('dashboard/payments')
                           }}
                         >
@@ -883,15 +605,38 @@ export function SubscriptionsPage() {
             </div>
           )}
 
+          {renewingSub && !matchingPlan && (
+            <div className="py-4">
+              <div className="flex items-start gap-3 p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                <AlertCircle className="size-5 text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium text-amber-400">Plan no longer available</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    The plan &quot;{renewingSub.name}&quot; is no longer active. Please purchase a new subscription from the Overview page.
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-2 gap-1"
+                    onClick={() => {
+                      handleCancelRenew()
+                      navigate('dashboard')
+                    }}
+                  >
+                    Go to Overview
+                    <ArrowRight className="size-3" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={handleBackToPlans}>
-              Back
-            </Button>
             <Button variant="ghost" onClick={handleCancelRenew}>
               Cancel
             </Button>
-            {selectedPlan && balance >= finalPrice && (
-              <Button className="gap-1.5" onClick={handleConfirmPurchase}>
+            {renewingSub && matchingPlan && balance >= finalPrice && (
+              <Button className="gap-1.5" onClick={handleConfirmRenewal}>
                 <RefreshCw className="size-4" />
                 Confirm Renewal — ৳{finalPrice.toFixed(2)}
               </Button>

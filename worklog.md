@@ -1,49 +1,36 @@
 ---
 Task ID: 1
-Agent: Main
-Task: Revert preset visibility from user side, add Auto preset option for admin
+Agent: Main Agent
+Task: Apply CoreX Logo with light/dark mode support, fix renewal process, add extend feature
 
 Work Log:
-- Explored codebase for all "preset" references across user and admin components
-- Found 3 locations in overview-page.tsx showing preset names/warnings to users
-- Removed all preset-related UI from user-facing overview-page.tsx
-- Updated admin-plans.tsx with Auto preset option
-- Updated mock-data.ts: all plans default to 'auto'
-- Lint passes cleanly, dev server running OK
+- Copied uploaded logo files to /public/ (corex-logo-light.png, corex-logo-dark.png)
+- Created shared CoreXLogo and CoreXLogoIcon components (src/components/shared/corex-logo.tsx)
+- Updated all pages to use CoreXLogo component instead of Shield icon:
+  - Dashboard sidebar (dashboard-layout.tsx)
+  - Admin sidebar (admin-layout.tsx)
+  - Landing page navbar + footer (landing-page.tsx)
+  - Login page (login-page.tsx)
+  - About page navbar + footer (about-page.tsx)
+  - Download page header (download-page.tsx)
+  - Docs page header (docs-page.tsx)
+- Fixed Renewal Process (subscriptions-page.tsx):
+  - Renew now reactivates the SAME subscription with the SAME plan
+  - No more plan selection dialog - shows the matching plan details automatically
+  - New expiry = today + plan duration (since sub is already expired)
+  - Shows warning if original plan is no longer available
+  - Removed the full plan browser from the renew flow
+- Added Extend Subscription feature (overview-page.tsx):
+  - New "Extend" button next to "Configure" on active subscriptions
+  - Extend dialog shows same plan details (not changeable)
+  - New expiry = current expiry date + plan duration (extends from current, not today)
+  - Price calculated from same plan & device count
+  - Coupon support and balance check included
+  - Shows warning if original plan is no longer available
+  - Uses CalendarPlus icon for the extend button
 
 Stage Summary:
-- Users never see "Preset" or preset names
-- Admin has 3 options: Auto, None, or specific preset
-- Default for new plans is "Auto"
-
----
-Task ID: 2
-Agent: Main
-Task: Restructure Overview and Subscriptions pages
-
-Work Log:
-- Overview page (overview-page.tsx):
-  - Now only shows ACTIVE subscriptions (filtered out expired/renewable)
-  - Removed Status column from table (all are active, no need)
-  - Action button: Configure only
-  - Added empty state when no active subscriptions
-  - Removed unused StatusBadge component
-  - Stats kept: Active Subscriptions, Active Devices, Balance, Referrals
-- Subscriptions page (subscriptions-page.tsx):
-  - Complete rewrite: now shows EXPIRED & RENEWABLE subscriptions only
-  - 60-day auto-vanish logic: expired subs older than 60 days are filtered out
-  - "Vanishes In" column shows countdown (red ≤7d, amber ≤30d, gray >30d)
-  - Action button: Renew (opens plan selection dialog)
-  - Full renewal flow: plan selection → device picker → coupon → checkout
-  - Stats: Total Spent (Wallet icon), Active (CreditCard icon), Renewable (RefreshCw icon)
-  - Each stat has unique icon — no more duplicate Settings icons
-  - Empty state when no history within 60 days
-  - Header explains 60-day auto-vanish policy
-- Lint passes cleanly
-- Dev server running OK
-
-Stage Summary:
-- Overview = Active subs only + Configure button
-- Subscriptions = Expired/Renewable history + Renew button + 60-day vanish
-- Icons are now unique: Wallet for Total Spent, CreditCard for Active, RefreshCw for Renewable
-- Full renewal purchase flow implemented in subscriptions page
+- CoreX logo now dynamically switches between light/dark mode variants across all pages
+- Renew = Reactivate same subscription (extend from today), not buy a new plan
+- Extend = Add more time to active subscription (extend from current expiry date)
+- Both features include coupon support and insufficient balance warnings
