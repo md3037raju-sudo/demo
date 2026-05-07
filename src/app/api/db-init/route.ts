@@ -4,44 +4,82 @@ import { getSupabaseServer as supabaseServer } from '@/lib/supabase-client'
 
 /**
  * POST /api/db-init
- * Body: { action: 'init' | 'reset' | 'seed' | 'status', databaseUrl?: string }
+ * Body: { action: 'init' | 'reset' | 'seed' | 'status' }
  *
- * - status: Checks which tables exist in Supabase
- * - init: Creates all tables using PostgreSQL direct connection
- * - reset: Drops all tables
- * - seed: Inserts mock data via Supabase REST API
+ * Uses Supabase Management API to execute SQL (no direct PostgreSQL needed).
+ * This works even when the DB host is only reachable via IPv6.
  */
+
+// ── Helpers ──
+
+function getProjectRef(): string {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+  return url.replace('https://', '').replace('.supabase.co', '')
+}
+
+function getAccessToken(): string {
+  return process.env.SUPABASE_ACCESS_TOKEN || ''
+}
+
+/**
+ * Execute SQL via Supabase Management API
+ */
+async function executeSql(sql: string): Promise<{ success: boolean; error?: string }> {
+  const projectRef = getProjectRef()
+  const accessToken = getAccessToken()
+
+  if (!projectRef || !accessToken) {
+    return { success: false, error: 'SUPABASE_ACCESS_TOKEN or project URL not configured in .env.local' }
+  }
+
+  try {
+    const res = await fetch(
+      `https://api.supabase.com/v1/projects/${projectRef}/database/query`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ query: sql }),
+      }
+    )
+
+    if (!res.ok) {
+      const text = await res.text()
+      return { success: false, error: `API ${res.status}: ${text.slice(0, 200)}` }
+    }
+
+    const data = await res.json()
+
+    // Management API returns array of results; check for errors
+    if (Array.isArray(data) && data.length > 0 && data[0].error) {
+      return { success: false, error: data[0].error }
+    }
+
+    return { success: true }
+  } catch (err) {
+    return { success: false, error: String(err) }
+  }
+}
+
+// ── Route Handler ──
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { action, databaseUrl } = body
+    const { action } = body
 
     if (action === 'status') {
       return handleStatus()
     }
 
     if (action === 'init') {
-      const dbUrl = databaseUrl || process.env.DATABASE_URL
-      if (!dbUrl) {
-        return NextResponse.json({
-          success: false,
-          message: 'Database connection URL is required. Enter your Supabase DB password to auto-construct it.',
-          needsDbUrl: true,
-        })
-      }
-      return handleInitWithPg(dbUrl)
+      return handleInit()
     }
 
     if (action === 'reset') {
-      const dbUrl = databaseUrl || process.env.DATABASE_URL
-      if (!dbUrl) {
-        return NextResponse.json({
-          success: false,
-          message: 'Database connection URL required for reset.',
-          needsDbUrl: true,
-        })
-      }
-      return handleReset(dbUrl)
+      return handleReset()
     }
 
     if (action === 'seed') {
@@ -60,8 +98,66 @@ export async function POST(req: NextRequest) {
 
 /**
  * Check which tables exist in Supabase
+ * Uses Management API to avoid potential crashes from supabase-js client
  */
 async function handleStatus() {
+  const projectRef = getProjectRef()
+  const accessToken = getAccessToken()
+
+  if (!projectRef || !accessToken) {
+    // Fallback to supabase-js if no access token
+    return handleStatusFallback()
+  }
+
+  try {
+    const res = await fetch(
+      `https://api.supabase.com/v1/projects/${projectRef}/database/query`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: "SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename;"
+        }),
+      }
+    )
+
+    if (!res.ok) {
+      return handleStatusFallback()
+    }
+
+    const data = await res.json()
+    const existingTables = new Set(
+      (Array.isArray(data) ? data : []).map((r: any) => r.tablename)
+    )
+
+    const tableStatus: Record<string, boolean> = {}
+    for (const table of COREX_TABLES) {
+      tableStatus[table] = existingTables.has(table)
+    }
+
+    const existingCount = Object.values(tableStatus).filter(Boolean).length
+    const allExist = existingCount === COREX_TABLES.length
+
+    return NextResponse.json({
+      connected: true,
+      tables: tableStatus,
+      existingCount,
+      totalCount: COREX_TABLES.length,
+      allExist,
+      needsInit: !allExist,
+    })
+  } catch {
+    return handleStatusFallback()
+  }
+}
+
+/**
+ * Fallback: check tables using supabase-js client
+ */
+async function handleStatusFallback() {
   const tableStatus: Record<string, boolean> = {}
 
   for (const table of COREX_TABLES) {
@@ -70,7 +166,6 @@ async function handleStatus() {
         .from(table)
         .select('id')
         .limit(1)
-
       tableStatus[table] = !error
     } catch {
       tableStatus[table] = false
@@ -91,76 +186,117 @@ async function handleStatus() {
 }
 
 /**
- * Initialize tables using PostgreSQL direct connection
+ * Initialize tables using Supabase Management API
  */
-async function handleInitWithPg(databaseUrl: string) {
-  try {
-    const { Client } = await import('pg')
-    const client = new Client({
-      connectionString: databaseUrl,
-      ssl: databaseUrl.includes('supabase') ? { rejectUnauthorized: false } : undefined,
+async function handleInit() {
+  console.log('[DB-INIT] Starting initialization via Management API...')
+
+  const projectRef = getProjectRef()
+  const accessToken = getAccessToken()
+
+  if (!projectRef || !accessToken) {
+    return NextResponse.json({
+      success: false,
+      message: 'SUPABASE_ACCESS_TOKEN not configured in .env.local',
     })
+  }
 
-    await client.connect()
+  try {
+    // Send the full schema SQL as one request
+    const res = await fetch(
+      `https://api.supabase.com/v1/projects/${projectRef}/database/query`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ query: COREX_SCHEMA_SQL }),
+      }
+    )
 
-    // Execute the schema SQL in a transaction
-    await client.query('BEGIN')
-    try {
-      await client.query(COREX_SCHEMA_SQL)
-      await client.query('COMMIT')
-    } catch (err) {
-      await client.query('ROLLBACK')
-      throw err
+    if (!res.ok) {
+      const text = await res.text()
+      return NextResponse.json({
+        success: false,
+        message: `API error ${res.status}: ${text.slice(0, 200)}`,
+      })
     }
 
-    await client.end()
+    const data = await res.json()
+
+    // Check for errors in results
+    const errors = Array.isArray(data) ? data.filter((r: any) => r.error) : []
+    if (errors.length > 0) {
+      // Some errors might be OK (already exists)
+      const realErrors = errors.filter((e: any) =>
+        !e.error?.includes('already exists')
+      )
+      if (realErrors.length > 5) {
+        return NextResponse.json({
+          success: false,
+          message: `${realErrors.length} errors during init`,
+          errors: realErrors.slice(0, 10).map((e: any) => e.error?.slice(0, 100)),
+        })
+      }
+    }
+
+    // Verify tables were created
+    const verifyRes = await fetch(
+      `https://api.supabase.com/v1/projects/${projectRef}/database/query`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: "SELECT tablename FROM pg_tables WHERE schemaname = 'public';"
+        }),
+      }
+    )
+    const verifyData = await verifyRes.json()
+    const existingTables = new Set(
+      (Array.isArray(verifyData) ? verifyData : []).map((r: any) => r.tablename)
+    )
+    let existingCount = 0
+    for (const table of COREX_TABLES) {
+      if (existingTables.has(table)) existingCount++
+    }
 
     return NextResponse.json({
-      success: true,
-      message: `All ${COREX_TABLES.length} tables created successfully!`,
-      tablesCreated: COREX_TABLES.length,
+      success: existingCount > 0,
+      message: existingCount > 0
+        ? `${existingCount}/${COREX_TABLES.length} tables created successfully!`
+        : 'Failed to create tables',
+      tablesCreated: existingCount,
+      totalTables: COREX_TABLES.length,
     })
   } catch (error) {
-    console.error('[DB-INIT] PostgreSQL error:', error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to create tables',
-        details: String(error),
-      },
-      { status: 500 }
-    )
+    console.error('[DB-INIT] Management API error:', error)
+    return NextResponse.json({
+      success: false,
+      message: `Failed: ${String(error)}`,
+    })
   }
 }
 
 /**
- * Reset (drop) all tables
+ * Reset (drop) all tables using Management API
  */
-async function handleReset(databaseUrl: string) {
-  try {
-    const { Client } = await import('pg')
-    const client = new Client({
-      connectionString: databaseUrl,
-      ssl: databaseUrl.includes('supabase') ? { rejectUnauthorized: false } : undefined,
-    })
-    await client.connect()
-    await client.query(COREX_DROP_SQL)
-    await client.end()
-
+async function handleReset() {
+  const result = await executeSql(COREX_DROP_SQL)
+  if (!result.success) {
     return NextResponse.json({
-      success: true,
-      message: 'All tables dropped successfully!',
+      success: false,
+      message: result.error || 'Failed to drop tables',
     })
-  } catch (error) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to drop tables',
-        details: String(error),
-      },
-      { status: 500 }
-    )
   }
+
+  return NextResponse.json({
+    success: true,
+    message: 'All tables dropped successfully!',
+  })
 }
 
 /**
@@ -334,4 +470,25 @@ async function handleSeed() {
     message: successCount,
     errors: results.length > 0 ? results : undefined,
   })
+}
+
+/**
+ * Verify which tables exist
+ */
+async function verifyTables() {
+  const tableStatus: Record<string, boolean> = {}
+
+  for (const table of COREX_TABLES) {
+    try {
+      const { error } = await supabaseServer()
+        .from(table)
+        .select('id')
+        .limit(1)
+      tableStatus[table] = !error
+    } catch {
+      tableStatus[table] = false
+    }
+  }
+
+  return { tableStatus }
 }

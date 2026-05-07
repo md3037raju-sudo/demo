@@ -4,8 +4,6 @@ import React, { useState, useCallback, useEffect } from 'react'
 import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Separator } from '@/components/ui/separator'
@@ -33,10 +31,7 @@ import {
   FileJson,
   CheckCircle2,
   Loader2,
-  Key,
   RefreshCw,
-  Eye,
-  EyeOff,
   Copy,
   Zap,
 } from 'lucide-react'
@@ -51,8 +46,6 @@ import { COREX_TABLES } from '@/lib/supabase-schema'
 
 export function AdminDbInitPage() {
   // Connection states
-  const [dbPassword, setDbPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
   const [dbStatus, setDbStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected')
   const [connectionError, setConnectionError] = useState('')
 
@@ -133,29 +126,14 @@ export function AdminDbInitPage() {
     }
   }
 
-  // Construct DATABASE_URL from project ref + password
-  const constructDatabaseUrl = useCallback(() => {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-    const projectRef = supabaseUrl.replace('https://', '').replace('.supabase.co', '')
-    if (!dbPassword || !projectRef) return ''
-    return `postgresql://postgres.${projectRef}:${dbPassword}@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres`
-  }, [dbPassword])
-
-  // ── Initialize Database ──
+  // ── Initialize Database (uses Management API, no password needed) ──
   const handleInitialize = useCallback(async () => {
-    const databaseUrl = constructDatabaseUrl()
-    if (!databaseUrl) {
-      toast.error('Please enter your Supabase database password')
-      return
-    }
-
     setIsInitializing(true)
     setInitProgress(0)
     setInitComplete(false)
     setInitMessage('')
 
     try {
-      // Simulate progress while waiting
       const progressInterval = setInterval(() => {
         setInitProgress((prev) => Math.min(prev + 2, 90))
       }, 500)
@@ -163,7 +141,7 @@ export function AdminDbInitPage() {
       const res = await fetch('/api/db-init', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'init', databaseUrl }),
+        body: JSON.stringify({ action: 'init' }),
       })
 
       clearInterval(progressInterval)
@@ -177,21 +155,14 @@ export function AdminDbInitPage() {
         toast.success('Database initialized successfully!', {
           description: data.message,
         })
-        // Refresh table status
         await checkConnection()
       } else {
         setInitProgress(0)
         setInitMessage('')
-        if (data.needsDbUrl) {
-          toast.error('Could not connect to PostgreSQL', {
-            description: 'Make sure your database password is correct.',
-          })
-        } else {
-          toast.error('Initialization failed', {
-            description: data.error || data.details || 'Unknown error',
-          })
-          setConnectionError(data.details || data.error || 'Unknown error')
-        }
+        toast.error('Initialization failed', {
+          description: data.error || data.errors?.join(', ') || 'Unknown error',
+        })
+        setConnectionError(data.error || data.errors?.join(', ') || 'Unknown error')
       }
     } catch (err) {
       setInitProgress(0)
@@ -201,7 +172,7 @@ export function AdminDbInitPage() {
     } finally {
       setIsInitializing(false)
     }
-  }, [constructDatabaseUrl])
+  }, [])
 
   // ── Seed Mock Data ──
   const handleSeedData = async () => {
@@ -234,17 +205,11 @@ export function AdminDbInitPage() {
 
   // ── Reset Database ──
   const handleResetDatabase = async () => {
-    const databaseUrl = constructDatabaseUrl()
-    if (!databaseUrl) {
-      toast.error('Please enter your database password first')
-      return
-    }
-
     try {
       const res = await fetch('/api/db-init', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'reset', databaseUrl }),
+        body: JSON.stringify({ action: 'reset' }),
       })
       const data = await res.json()
 
@@ -430,7 +395,7 @@ export function AdminDbInitPage() {
           Database Initialization
         </h2>
         <p className="text-muted-foreground">
-          One-click Supabase auto-initialization — just enter your DB password
+          One-click Supabase auto-initialization — no password needed
         </p>
       </div>
 
@@ -442,7 +407,7 @@ export function AdminDbInitPage() {
             Supabase Connection
           </CardTitle>
           <CardDescription>
-            Enter your Supabase database password to connect. URL and keys are already configured.
+            All credentials are configured in your .env.local. Click Initialize to create all tables.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -604,61 +569,24 @@ export function AdminDbInitPage() {
         </CardContent>
       </Card>
 
-      {/* ══════════ Database Password & Initialize ══════════ */}
+      {/* ══════════ Initialize Database ══════════ */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Key className="size-5 text-primary" />
-            Database Password & Initialize
+            <Zap className="size-5 text-primary" />
+            One-Click Initialize
           </CardTitle>
           <CardDescription>
-            Enter your Supabase database password. This is used ONLY to create tables — it&apos;s never stored permanently.
+            Creates all 19 tables, indexes, RLS policies, and seed data automatically via Supabase Management API.
+            No password needed — everything is configured in your <code className="bg-muted px-1 rounded">.env.local</code>.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Password Input */}
-          <div className="space-y-2">
-            <Label htmlFor="db-password">Supabase Database Password</Label>
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Input
-                  id="db-password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Your Supabase database password"
-                  value={dbPassword}
-                  onChange={(e) => setDbPassword(e.target.value)}
-                  className="pr-10"
-                />
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-1 top-1/2 -translate-y-1/2 size-7 p-0"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
-                </Button>
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Found in: Supabase Dashboard → Settings → Database → Database password
-            </p>
-          </div>
-
-          {/* Constructed URL Preview */}
-          {dbPassword && (
-            <div className="rounded-lg border border-muted p-3 space-y-1">
-              <p className="text-xs text-muted-foreground">Connection string (auto-constructed):</p>
-              <p className="text-xs font-mono text-muted-foreground/80 break-all">
-                postgresql://postgres.***:***@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres
-              </p>
-            </div>
-          )}
-
           {/* Initialize Button */}
           <Button
             size="lg"
             onClick={handleInitialize}
-            disabled={isInitializing || !dbPassword}
+            disabled={isInitializing}
             className="w-full sm:w-auto gap-2"
           >
             {isInitializing ? (
@@ -728,7 +656,7 @@ export function AdminDbInitPage() {
           <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-400">
             <AlertTriangle className="size-4 mt-0.5 shrink-0" />
             <span>
-              Your password is only used for this initialization step. It is NOT stored in cookies, localStorage, or any persistent storage.
+              Initialization uses the Supabase Management API. Your access token is stored in <code className="bg-muted px-1 rounded">.env.local</code> and never exposed to the browser.
             </span>
           </div>
         </CardContent>
