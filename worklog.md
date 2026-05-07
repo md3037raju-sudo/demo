@@ -140,6 +140,26 @@
 ## Status: All lint passing, dev server running on port 3000
 
 ---
+Task ID: 1
+Agent: mock-data-updater
+Task: Update mock-data.ts with new Plan schema
+
+Work Log:
+- Replaced mockPlans with new advanced Plan type
+- Added PlanDuration, DevicePricing types
+- Added helper functions (getDurationLabel, calculateDevicePrice, getPerDeviceCost, getSavingsPercent)
+- Added defaultDevicePricing constant
+- Updated mockPlans with 8 plans covering all durations (3d, 7d, 15d, 30d, 6m, 1y)
+- Updated mockSubscriptions: name → Pro/Unlimited Annual/Starter, plan → 30 Days/1 Year, prices → 99/1299/49, bandwidthLimit → 200/0/50
+- Updated mockRecycleBin: subscriptionName → Starter/Pro, plan → 30 Days, prices → 49/99
+
+Stage Summary:
+- New Plan schema supports device pricing %, bandwidth types, durations 3d/7d/15d/30d/6m/1y
+- 8 mock plans created covering all duration options
+- Helper functions for price calculations added
+- mockSubscriptions and mockRecycleBin updated to match new plan names and prices
+
+---
 Task ID: 1-c
 Agent: lib-pages-currency-fixer
 Task: Replace $ with ৳ in lib and pages files
@@ -186,3 +206,57 @@ Work Log:
 
 Stage Summary:
 - All currency symbols in dashboard components changed from $ to ৳
+
+---
+Task ID: 2
+Agent: admin-plans-rewriter
+Task: Completely rewrite admin-plans.tsx with new Plan system
+
+Work Log:
+- Read worklog.md, mock-data.ts, and existing admin-plans.tsx to understand context
+- Verified available shadcn/ui components (checkbox, separator, badge, dialog, alert-dialog, select, switch, input, label, card, button all present)
+- Completely rewrote admin-plans.tsx from scratch with new Plan type and all helper functions
+- Implemented 6 major feature areas:
+
+1. **Stats Bar** (5 cards): Total Plans (active/inactive), Total Subscribers, Most Popular Plan, Revenue Estimate (base price × subscribers), Featured count
+
+2. **Filter/Sort System**: Search by name/description/features, filter by Duration (3d/7d/15d/30d/6m/1y), Bandwidth Type (unlimited/limited), Status (active/inactive), Sort by Name/Price/Subscribers
+
+3. **Bulk Actions**: Checkbox selection per card + Select All, bulk Activate/Deactivate/Delete with AlertDialog confirmations, contextual action bar when items selected
+
+4. **Plan Card Grid**: Each card shows — name with Featured star badge, Active/Inactive badge, description, bandwidth type badge (green=Unlimited, amber=Limited), duration badge, base price with ৳, speed/bandwidth/preset info rows, full device pricing table (1-5 devices with calculated price, per-device cost, savings %), feature badges, subscriber count, Edit/Clone/Delete action buttons
+
+5. **Create/Edit Dialog**: Full form with Name, Description, Speed, Bandwidth Type (disables limit when unlimited), Bandwidth Limit, Duration select (all 6 options), Base Price (৳), Device Pricing section (5 inputs for % of base with live calculated prices and per-device costs + savings), Reset to Default button, Proxy Preset select (from mockProxyPresets + None), Features (comma-separated with live preview badges), Featured toggle, Active toggle
+
+6. **Clone Plan**: Duplicates plan with new ID, "(Copy)" suffix, 0 subscribers, current date
+
+- All imports from @/lib/mock-data: mockPlans, Plan, PlanDuration, DevicePricing, getDurationLabel, calculateDevicePrice, getPerDeviceCost, getSavingsPercent, defaultDevicePricing, mockProxyPresets
+- Uses useState for local plan list management (initialized from mockPlans with deep copies)
+- Uses useMemo for filtered/sorted plans and stats computation
+- All shadcn/ui components used: Card, Button, Badge, Input, Label, Switch, Dialog, Select, AlertDialog, Separator, Checkbox
+- Lint: passing with zero errors
+- Dev server: compiling successfully
+
+---
+Task ID: 3
+Agent: purchase-flow-rewriter
+Task: Rewrite purchase subscription flow with new Plan system, device selection, and live pricing
+
+Work Log:
+- Read worklog.md, mock-data.ts, overview-page.tsx, coupon-store.ts, auth-store.ts to understand current code
+- Completely rewrote overview-page.tsx purchase flow:
+  - **Subscription interface**: Added `devices: number` field
+  - **Step 1 — Plan Selection Dialog**: Uses Tabs component with duration-based tabs (3d, 7d, 15d, 30d, 6m, 1y); plans grouped by duration via useMemo; each plan card shows name, description, speed, bandwidth badge (unlimited=green), duration label, base price (1 device), "★ Recommended" badge for featured plans, check/chevron indicator; selected plan gets ring highlight
+  - **Step 2 — Device & Price Configuration**: Visual 5-button device selector (1-5) with Monitor icons; each button shows device count, total price, and "Save X%" badge for multi-device; live pricing summary card shows total price, per-device cost, and savings badge; plan features list below with check icons
+  - **Step 3 — Confirm Purchase Dialog**: Shows plan name + description, duration label, bandwidth badge, device count; price breakdown: base price (1 device), device multiplier info with %, per-device cost, multi-device savings %, total price; coupon section (reused existing logic but validates against totalPrice instead of plan.price); final price card with original price crossed out + discount + final price + balance check; insufficient balance warning with Go to Payments link
+  - **Subscription creation**: Now uses duration switch (3d→+3 days, 7d→+7 days, etc.) for expiry calculation; parses bandwidthLimit from string; stores selectedDevices count; uses getDurationLabel() for plan display name
+  - **Imports**: Added PlanDuration, Plan, getDurationLabel, calculateDevicePrice, getPerDeviceCost, getSavingsPercent, Tabs/TabsList/TabsTrigger/TabsContent, Star, Clock, Wifi, HardDrive, ChevronRight, Sparkles
+  - **Kept intact**: AnimateIn, stats cards with ৳, subscription table (added Devices column), deep link dialog, coupon store logic
+
+Stage Summary:
+- Purchase flow now fully supports new Plan type with device selection and live pricing
+- Plans are browsable by duration tabs
+- Device selector shows 5 clickable buttons with per-tier pricing and savings
+- Confirm dialog shows full price breakdown with device multiplier info
+- Currency is ৳ (Bangladeshi Taka) throughout
+- Lint passes cleanly, dev server compiles without errors

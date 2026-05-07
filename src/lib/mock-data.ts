@@ -3,40 +3,40 @@ export const mockSubscriptions = [
     id: 'sub_001',
     userId: 'usr_cx_001',
     userName: 'Alex Morgan',
-    name: 'CoreX Pro',
-    plan: 'Monthly',
+    name: 'Pro',
+    plan: '30 Days',
     status: 'active' as const,
     startDate: '2025-01-15',
     expiryDate: '2025-02-15',
-    price: 29.99,
+    price: 99,
     bandwidthUsed: 45.2,
-    bandwidthLimit: 100,
+    bandwidthLimit: 200,
     deepLink: 'corex://configure/sub_001',
   },
   {
     id: 'sub_002',
     userId: 'usr_cx_002',
     userName: 'Sarah Chen',
-    name: 'CoreX Enterprise',
-    plan: 'Yearly',
+    name: 'Unlimited Annual',
+    plan: '1 Year',
     status: 'active' as const,
     startDate: '2024-12-01',
     expiryDate: '2025-12-01',
-    price: 299.99,
+    price: 1299,
     bandwidthUsed: 320.5,
-    bandwidthLimit: 500,
+    bandwidthLimit: 0,
     deepLink: 'corex://configure/sub_002',
   },
   {
     id: 'sub_003',
     userId: 'usr_cx_003',
     userName: 'Mike Johnson',
-    name: 'CoreX Starter',
-    plan: 'Monthly',
+    name: 'Starter',
+    plan: '30 Days',
     status: 'expired' as const,
     startDate: '2024-10-01',
     expiryDate: '2024-11-01',
-    price: 9.99,
+    price: 49,
     bandwidthUsed: 12.8,
     bandwidthLimit: 50,
     deepLink: 'corex://configure/sub_003',
@@ -45,14 +45,14 @@ export const mockSubscriptions = [
     id: 'sub_004',
     userId: 'usr_cx_004',
     userName: 'Emily Davis',
-    name: 'CoreX Pro',
-    plan: 'Monthly',
+    name: 'Pro',
+    plan: '30 Days',
     status: 'renewable' as const,
     startDate: '2025-01-01',
     expiryDate: '2025-02-01',
-    price: 29.99,
+    price: 99,
     bandwidthUsed: 78.4,
-    bandwidthLimit: 100,
+    bandwidthLimit: 200,
     deepLink: 'corex://configure/sub_004',
   },
 ]
@@ -267,16 +267,223 @@ export const mockProxyPresets = [
   },
 ]
 
-export const mockPlans = [
-  { id: 'plan_001', name: 'CoreX Starter', speed: '10 Mbps', dataLimit: '50 GB', maxDevices: 1, price: 9.99, period: 'Monthly', isActive: true, subscribers: 45 },
-  { id: 'plan_002', name: 'CoreX Pro', speed: '50 Mbps', dataLimit: '100 GB', maxDevices: 3, price: 29.99, period: 'Monthly', isActive: true, subscribers: 156 },
-  { id: 'plan_003', name: 'CoreX Enterprise', speed: '100 Mbps', dataLimit: '500 GB', maxDevices: 10, price: 299.99, period: 'Yearly', isActive: true, subscribers: 32 },
-  { id: 'plan_004', name: 'CoreX Ultimate', speed: 'Unlimited', dataLimit: 'Unlimited', maxDevices: 5, price: 49.99, period: 'Monthly', isActive: false, subscribers: 0 },
+// Plan duration types
+export type PlanDuration = '3d' | '7d' | '15d' | '30d' | '6m' | '1y'
+
+// Device pricing percentages (admin-configurable)
+// Key = number of devices, Value = percentage of base price
+export type DevicePricing = Record<number, number>
+
+export interface Plan {
+  id: string
+  name: string
+  description: string
+  speed: string
+  bandwidthType: 'unlimited' | 'limited'
+  bandwidthLimit: string  // e.g. "50 GB", "100 GB" — or "Unlimited"
+  duration: PlanDuration
+  basePrice: number  // price for 1 device
+  devicePricing: DevicePricing  // {1: 100, 2: 160, 3: 210, 4: 250, 5: 280} — percentages of basePrice
+  maxDevices: number  // always 5
+  isActive: boolean
+  isFeatured: boolean  // featured/recommended plan
+  subscribers: number
+  proxyPresetId: string | null  // assigned proxy preset
+  features: string[]  // list of feature strings
+  createdAt: string
+}
+
+// Helper: get human-readable duration label
+export function getDurationLabel(duration: PlanDuration): string {
+  switch (duration) {
+    case '3d': return '3 Days'
+    case '7d': return '7 Days'
+    case '15d': return '15 Days'
+    case '30d': return '30 Days'
+    case '6m': return '6 Months'
+    case '1y': return '1 Year'
+  }
+}
+
+// Helper: calculate price for N devices
+export function calculateDevicePrice(basePrice: number, devicePricing: DevicePricing, devices: number): number {
+  const percentage = devicePricing[devices] ?? (100 + (devices - 1) * 55)
+  return Math.round(basePrice * percentage) / 100
+}
+
+// Helper: calculate per-device cost
+export function getPerDeviceCost(totalPrice: number, devices: number): number {
+  return Math.round((totalPrice / devices) * 100) / 100
+}
+
+// Helper: calculate savings percentage vs buying 1-device plan
+export function getSavingsPercent(basePrice: number, devicePricing: DevicePricing, devices: number): number {
+  if (devices <= 1) return 0
+  const singlePrice = calculateDevicePrice(basePrice, devicePricing, 1)
+  const multiPrice = calculateDevicePrice(basePrice, devicePricing, devices)
+  const multiPerDevice = multiPrice / devices
+  return Math.round((1 - multiPerDevice / singlePrice) * 100)
+}
+
+// Default device pricing percentages (admin can customize per plan)
+export const defaultDevicePricing: DevicePricing = {
+  1: 100,   // 100% base price
+  2: 160,   // 160% total (each device = 80%, saves 20%)
+  3: 210,   // 210% total (each = 70%, saves 30%)
+  4: 250,   // 250% total (each = 62.5%, saves 37.5%)
+  5: 280,   // 280% total (each = 56%, saves 44%)
+}
+
+export const mockPlans: Plan[] = [
+  {
+    id: 'plan_001',
+    name: 'Starter',
+    description: 'Perfect for trying out CoreX',
+    speed: '10 Mbps',
+    bandwidthType: 'limited',
+    bandwidthLimit: '50 GB',
+    duration: '30d',
+    basePrice: 49,
+    devicePricing: { 1: 100, 2: 160, 3: 210, 4: 250, 5: 280 },
+    maxDevices: 5,
+    isActive: true,
+    isFeatured: false,
+    subscribers: 45,
+    proxyPresetId: 'preset_001',
+    features: ['Limited bandwidth', 'BD & Asia nodes', 'Basic support'],
+    createdAt: '2024-11-01',
+  },
+  {
+    id: 'plan_002',
+    name: 'Pro',
+    description: 'Most popular for regular users',
+    speed: '50 Mbps',
+    bandwidthType: 'limited',
+    bandwidthLimit: '200 GB',
+    duration: '30d',
+    basePrice: 99,
+    devicePricing: { 1: 100, 2: 155, 3: 200, 4: 240, 5: 270 },
+    maxDevices: 5,
+    isActive: true,
+    isFeatured: true,
+    subscribers: 156,
+    proxyPresetId: 'preset_001',
+    features: ['200 GB bandwidth', 'All Asian nodes', 'Priority support', 'Load-balanced'],
+    createdAt: '2024-11-01',
+  },
+  {
+    id: 'plan_003',
+    name: 'Unlimited',
+    description: 'Unlimited bandwidth, unlimited freedom',
+    speed: '100 Mbps',
+    bandwidthType: 'unlimited',
+    bandwidthLimit: 'Unlimited',
+    duration: '30d',
+    basePrice: 149,
+    devicePricing: { 1: 100, 2: 155, 3: 200, 4: 240, 5: 270 },
+    maxDevices: 5,
+    isActive: true,
+    isFeatured: false,
+    subscribers: 98,
+    proxyPresetId: 'preset_002',
+    features: ['Unlimited bandwidth', 'All global nodes', '24/7 support', 'Load-balanced', 'Priority servers'],
+    createdAt: '2024-11-01',
+  },
+  {
+    id: 'plan_004',
+    name: 'Trial',
+    description: 'Quick test drive of CoreX',
+    speed: '20 Mbps',
+    bandwidthType: 'limited',
+    bandwidthLimit: '10 GB',
+    duration: '3d',
+    basePrice: 15,
+    devicePricing: { 1: 100, 2: 170, 3: 230, 4: 280, 5: 320 },
+    maxDevices: 5,
+    isActive: true,
+    isFeatured: false,
+    subscribers: 210,
+    proxyPresetId: 'preset_001',
+    features: ['10 GB bandwidth', 'BD nodes only', 'Quick trial'],
+    createdAt: '2024-12-15',
+  },
+  {
+    id: 'plan_005',
+    name: 'Weekly Pro',
+    description: 'Short-term premium access',
+    speed: '50 Mbps',
+    bandwidthType: 'limited',
+    bandwidthLimit: '50 GB',
+    duration: '7d',
+    basePrice: 35,
+    devicePricing: { 1: 100, 2: 160, 3: 210, 4: 250, 5: 280 },
+    maxDevices: 5,
+    isActive: true,
+    isFeatured: false,
+    subscribers: 72,
+    proxyPresetId: 'preset_002',
+    features: ['50 GB bandwidth', 'All Asian nodes', 'Priority support'],
+    createdAt: '2025-01-10',
+  },
+  {
+    id: 'plan_006',
+    name: 'Unlimited Annual',
+    description: 'Best value — 12 months of unlimited access',
+    speed: 'Unlimited',
+    bandwidthType: 'unlimited',
+    bandwidthLimit: 'Unlimited',
+    duration: '1y',
+    basePrice: 1299,
+    devicePricing: { 1: 100, 2: 150, 3: 190, 4: 225, 5: 255 },
+    maxDevices: 5,
+    isActive: true,
+    isFeatured: true,
+    subscribers: 32,
+    proxyPresetId: 'preset_003',
+    features: ['Unlimited everything', 'All global nodes', '24/7 VIP support', 'Exclusive servers', '2 months free'],
+    createdAt: '2024-11-01',
+  },
+  {
+    id: 'plan_007',
+    name: 'Bi-Annual Pro',
+    description: '6 months of Pro-level access',
+    speed: '50 Mbps',
+    bandwidthType: 'unlimited',
+    bandwidthLimit: 'Unlimited',
+    duration: '6m',
+    basePrice: 499,
+    devicePricing: { 1: 100, 2: 155, 3: 200, 4: 240, 5: 270 },
+    maxDevices: 5,
+    isActive: true,
+    isFeatured: false,
+    subscribers: 28,
+    proxyPresetId: 'preset_003',
+    features: ['Unlimited bandwidth', 'All nodes', 'Priority support', '1 month free'],
+    createdAt: '2025-01-01',
+  },
+  {
+    id: 'plan_008',
+    name: 'Fortnight',
+    description: '2-week unlimited plan',
+    speed: '80 Mbps',
+    bandwidthType: 'unlimited',
+    bandwidthLimit: 'Unlimited',
+    duration: '15d',
+    basePrice: 79,
+    devicePricing: { 1: 100, 2: 160, 3: 210, 4: 250, 5: 280 },
+    maxDevices: 5,
+    isActive: false,
+    isFeatured: false,
+    subscribers: 0,
+    proxyPresetId: null,
+    features: ['Unlimited bandwidth', 'All Asian nodes', 'Support'],
+    createdAt: '2025-02-01',
+  },
 ]
 
 export const mockRecycleBin = [
-  { id: 'del_001', subscriptionId: 'sub_005', subscriptionName: 'CoreX Starter', userId: 'usr_cx_003', userName: 'Mike Johnson', deletedAt: '2025-02-09', restoreDeadline: '2025-02-12', plan: 'Monthly', price: 9.99 },
-  { id: 'del_002', subscriptionId: 'sub_006', subscriptionName: 'CoreX Pro', userId: 'usr_cx_004', userName: 'Emily Davis', deletedAt: '2025-02-10', restoreDeadline: '2025-02-13', plan: 'Monthly', price: 29.99 },
+  { id: 'del_001', subscriptionId: 'sub_005', subscriptionName: 'Starter', userId: 'usr_cx_003', userName: 'Mike Johnson', deletedAt: '2025-02-09', restoreDeadline: '2025-02-12', plan: '30 Days', price: 49 },
+  { id: 'del_002', subscriptionId: 'sub_006', subscriptionName: 'Pro', userId: 'usr_cx_004', userName: 'Emily Davis', deletedAt: '2025-02-10', restoreDeadline: '2025-02-13', plan: '30 Days', price: 99 },
 ]
 
 export const mockAdminPayments = [

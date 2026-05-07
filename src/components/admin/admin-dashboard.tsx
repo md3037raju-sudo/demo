@@ -7,7 +7,7 @@ import { Progress } from '@/components/ui/progress'
 import { Separator } from '@/components/ui/separator'
 import { Button } from '@/components/ui/button'
 import { useNavigationStore, type Page } from '@/lib/navigation-store'
-import { mockActivityLogs } from '@/lib/mock-data'
+import { mockActivityLogs, mockPlans, getDurationLabel } from '@/lib/mock-data'
 import { useReferralStore } from '@/lib/referral-store'
 import {
   Users,
@@ -46,12 +46,17 @@ const revenueData = [
   { month: 'Jun', revenue: 362 },
 ]
 
-// Subscription distribution data
-const subscriptionData = [
-  { name: 'Starter', value: 45, color: '#10b981' },
-  { name: 'Pro', value: 156, color: '#14b8a6' },
-  { name: 'Enterprise', value: 32, color: '#f59e0b' },
-]
+// Subscription distribution data — derived from mockPlans
+const activePlans = mockPlans.filter(p => p.isActive && p.subscribers > 0)
+const subscriptionData = activePlans.map((p, i) => {
+  const colors = ['#10b981', '#14b8a6', '#f59e0b', '#06b6d4', '#8b5cf6', '#ec4899', '#f97316', '#6366f1']
+  return { name: p.name, value: p.subscribers, color: colors[i % colors.length], duration: getDurationLabel(p.duration) }
+})
+
+// Revenue estimate from plans
+const totalRevenueEstimate = activePlans.reduce((sum, p) => sum + (p.basePrice * p.subscribers), 0)
+const totalSubscribers = activePlans.reduce((sum, p) => sum + p.subscribers, 0)
+const mostPopularPlan = activePlans.reduce((max, p) => p.subscribers > max.subscribers ? p : max, activePlans[0])
 
 // User growth data
 const userGrowthData = [
@@ -156,9 +161,9 @@ export function AdminDashboard() {
             <div className="flex items-center justify-between">
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">Active Subscriptions</p>
-                <p className="text-3xl font-bold">4</p>
+                <p className="text-3xl font-bold">{totalSubscribers}</p>
                 <p className="text-xs text-muted-foreground">
-                  Revenue: <span className="text-emerald-500 font-medium">৳369.96</span>
+                  Most popular: <span className="text-emerald-500 font-medium">{mostPopularPlan?.name ?? '—'}</span>
                 </p>
               </div>
               <div className="flex size-12 items-center justify-center rounded-xl bg-teal-500/10">
@@ -189,11 +194,11 @@ export function AdminDashboard() {
           <CardContent className="pt-0">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Total Revenue</p>
-                <p className="text-3xl font-bold">৳1,247<span className="text-lg">.50</span></p>
+                <p className="text-sm text-muted-foreground">Revenue Estimate</p>
+                <p className="text-3xl font-bold">৳{totalRevenueEstimate.toLocaleString()}</p>
                 <p className="text-xs text-emerald-500 flex items-center gap-1">
                   <TrendingUp className="size-3" />
-                  +15.3% from last month
+                  {activePlans.length} active plans
                 </p>
               </div>
               <div className="flex size-12 items-center justify-center rounded-xl bg-amber-500/10">
@@ -293,7 +298,7 @@ export function AdminDashboard() {
                     <div className="flex-1">
                       <p className="text-sm font-medium">{item.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {item.value} subscribers
+                        {item.value} subscribers · {item.duration}
                       </p>
                     </div>
                   </div>

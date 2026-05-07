@@ -1,8 +1,19 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { useAuthStore } from '@/lib/auth-store'
-import { mockSubscriptions, mockActiveDevices, mockPlans, type Coupon } from '@/lib/mock-data'
+import {
+  mockSubscriptions,
+  mockActiveDevices,
+  mockPlans,
+  type Coupon,
+  type Plan,
+  type PlanDuration,
+  getDurationLabel,
+  calculateDevicePrice,
+  getPerDeviceCost,
+  getSavingsPercent,
+} from '@/lib/mock-data'
 import { useCouponStore } from '@/lib/coupon-store'
 import { useNavigationStore } from '@/lib/navigation-store'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -10,6 +21,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import {
   Table,
   TableBody,
@@ -41,6 +53,12 @@ import {
   ArrowRight,
   Tag,
   X,
+  Star,
+  Clock,
+  Wifi,
+  HardDrive,
+  ChevronRight,
+  Sparkles,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { AnimateIn } from '@/components/shared/animate-in'
@@ -58,6 +76,7 @@ interface Subscription {
   bandwidthUsed: number
   bandwidthLimit: number
   deepLink: string
+  devices: number
 }
 
 function StatusBadge({ status }: { status: 'active' | 'expired' | 'renewable' }) {
@@ -83,6 +102,9 @@ function StatusBadge({ status }: { status: 'active' | 'expired' | 'renewable' })
   }
 }
 
+// Duration tab order
+const DURATION_ORDER: PlanDuration[] = ['3d', '7d', '15d', '30d', '6m', '1y']
+
 export function OverviewPage() {
   const { user, deductBalance } = useAuthStore()
   const navigate = useNavigationStore((s) => s.navigate)
@@ -93,7 +115,8 @@ export function OverviewPage() {
   const [purchaseDialogOpen, setPurchaseDialogOpen] = useState(false)
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null)
-  const [subscriptions, setSubscriptions] = useState<Subscription[]>(mockSubscriptions)
+  const [selectedDevices, setSelectedDevices] = useState(1)
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>(mockSubscriptions as Subscription[])
 
   // Coupon state
   const couponStore = useCouponStore()
@@ -119,17 +142,59 @@ export function OverviewPage() {
     setConfigDialogOpen(false)
   }
 
-  const selectedPlan = mockPlans.find((p) => p.id === selectedPlanId)
+  const selectedPlan = mockPlans.find((p) => p.id === selectedPlanId) ?? null
+
+  // Active plans grouped by duration
+  const activePlans = useMemo(() => mockPlans.filter((p) => p.isActive), [])
+  const plansByDuration = useMemo(() => {
+    const grouped: Partial<Record<PlanDuration, Plan[]>> = {}
+    for (const plan of activePlans) {
+      if (!grouped[plan.duration]) grouped[plan.duration] = []
+      grouped[plan.duration]!.push(plan)
+    }
+    return grouped
+  }, [activePlans])
+
+  // Default tab: first duration that has plans
+  const defaultDurationTab = useMemo(() => {
+    for (const d of DURATION_ORDER) {
+      if (plansByDuration[d] && plansByDuration[d]!.length > 0) return d
+    }
+    return '30d'
+  }, [plansByDuration])
+
+  // Live price calculation
+  const totalPrice = selectedPlan
+    ? calculateDevicePrice(selectedPlan.basePrice, selectedPlan.devicePricing, selectedDevices)
+    : 0
+  const perDeviceCost = selectedPlan
+    ? getPerDeviceCost(totalPrice, selectedDevices)
+    : 0
+  const savingsPercent = selectedPlan
+    ? getSavingsPercent(selectedPlan.basePrice, selectedPlan.devicePricing, selectedDevices)
+    : 0
+
+  const finalPrice = Math.max(0, totalPrice - couponDiscount)
 
   const handleSelectPlan = (planId: string) => {
     setSelectedPlanId(planId)
-    setPurchaseDialogOpen(false)
-    setConfirmDialogOpen(true)
+    setSelectedDevices(1)
     // Reset coupon state when new plan selected
     setCouponInput('')
     setAppliedCoupon(null)
     setCouponError('')
     setCouponDiscount(0)
+  }
+
+  const handleProceedToCheckout = () => {
+    if (!selectedPlanId) return
+    setPurchaseDialogOpen(false)
+    setConfirmDialogOpen(true)
+  }
+
+  const handleBackToPlans = () => {
+    setConfirmDialogOpen(false)
+    setPurchaseDialogOpen(true)
   }
 
   const handleApplyCoupon = () => {
@@ -141,7 +206,7 @@ export function OverviewPage() {
     if (!selectedPlan) return
 
     const userId = user?.id ?? 'usr_cx_001'
-    const result = couponStore.validateCoupon(couponInput.trim(), userId, selectedPlan.id, selectedPlan.price)
+    const result = couponStore.validateCoupon(couponInput.trim(), userId, selectedPlan.id, totalPrice)
 
     if (!result.valid) {
       setCouponError(result.error || 'Invalid coupon')
@@ -165,8 +230,6 @@ export function OverviewPage() {
     setCouponError('')
   }
 
-  const finalPrice = selectedPlan ? Math.max(0, selectedPlan.price - couponDiscount) : 0
-
   const handleConfirmPurchase = () => {
     if (!selectedPlan) return
 
@@ -182,34 +245,44 @@ export function OverviewPage() {
       couponStore.claimCoupon(appliedCoupon.id, user?.id ?? 'usr_cx_001', user?.name ?? 'User', couponDiscount)
     }
 
-    // Create new subscription
+    // Calculate expiry date based on duration
     const now = new Date()
     const expiry = new Date(now)
-    if (selectedPlan.period === 'Monthly') {
-      expiry.setMonth(expiry.getMonth() + 1)
-    } else if (selectedPlan.period === 'Yearly') {
-      expiry.setFullYear(expiry.getFullYear() + 1)
+    switch (selectedPlan.duration) {
+      case '3d': expiry.setDate(expiry.getDate() + 3); break
+      case '7d': expiry.setDate(expiry.getDate() + 7); break
+      case '15d': expiry.setDate(expiry.getDate() + 15); break
+      case '30d': expiry.setMonth(expiry.getMonth() + 1); break
+      case '6m': expiry.setMonth(expiry.getMonth() + 6); break
+      case '1y': expiry.setFullYear(expiry.getFullYear() + 1); break
     }
+
+    // Parse bandwidth limit
+    const bwLimit = selectedPlan.bandwidthType === 'unlimited'
+      ? 9999
+      : parseInt(selectedPlan.bandwidthLimit.replace(/[^0-9]/g, '')) || 0
 
     const newSub: Subscription = {
       id: `sub_${Date.now()}`,
       userId: user?.id ?? 'usr_cx_001',
       userName: user?.name ?? 'Alex Morgan',
       name: selectedPlan.name,
-      plan: selectedPlan.period,
+      plan: getDurationLabel(selectedPlan.duration),
       status: 'active',
       startDate: now.toISOString().split('T')[0],
       expiryDate: expiry.toISOString().split('T')[0],
-      price: selectedPlan.price,
+      price: totalPrice,
       bandwidthUsed: 0,
-      bandwidthLimit: selectedPlan.dataLimit === 'Unlimited' ? 9999 : parseInt(selectedPlan.dataLimit),
+      bandwidthLimit: bwLimit,
       deepLink: `corex://configure/sub_${Date.now()}`,
+      devices: selectedDevices,
     }
 
     setSubscriptions((prev) => [newSub, ...prev])
 
     setConfirmDialogOpen(false)
     setSelectedPlanId(null)
+    setSelectedDevices(1)
     setAppliedCoupon(null)
     setCouponInput('')
     setCouponDiscount(0)
@@ -217,13 +290,14 @@ export function OverviewPage() {
 
     const discountMsg = couponDiscount > 0 ? ` ৳${couponDiscount.toFixed(2)} coupon discount applied.` : ''
     toast.success('Subscription purchased!', {
-      description: `${selectedPlan.name} (${selectedPlan.period}) has been activated. ৳${finalPrice.toFixed(2)} deducted from your balance.${discountMsg}`,
+      description: `${selectedPlan.name} (${getDurationLabel(selectedPlan.duration)}, ${selectedDevices} device${selectedDevices > 1 ? 's' : ''}) has been activated. ৳${finalPrice.toFixed(2)} deducted from your balance.${discountMsg}`,
     })
   }
 
   const handleCancelPurchase = () => {
     setConfirmDialogOpen(false)
     setSelectedPlanId(null)
+    setSelectedDevices(1)
     setAppliedCoupon(null)
     setCouponInput('')
     setCouponDiscount(0)
@@ -261,8 +335,6 @@ export function OverviewPage() {
     },
   ]
 
-  const activePlans = mockPlans.filter((p) => p.isActive)
-
   return (
     <div className="space-y-6">
       {/* Welcome + Buy Button */}
@@ -280,6 +352,7 @@ export function OverviewPage() {
           className="gap-2 shadow-lg shadow-primary/20"
           onClick={() => {
             setSelectedPlanId(null)
+            setSelectedDevices(1)
             setPurchaseDialogOpen(true)
           }}
         >
@@ -320,6 +393,7 @@ export function OverviewPage() {
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Plan</TableHead>
+                <TableHead>Devices</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Start Date</TableHead>
                 <TableHead>Expiry Date</TableHead>
@@ -332,6 +406,7 @@ export function OverviewPage() {
                 <TableRow key={sub.id}>
                   <TableCell className="font-medium">{sub.name}</TableCell>
                   <TableCell>{sub.plan}</TableCell>
+                  <TableCell>{sub.devices ?? 1}</TableCell>
                   <TableCell>
                     <StatusBadge status={sub.status} />
                   </TableCell>
@@ -377,81 +452,232 @@ export function OverviewPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Buy Subscription - Plan Selection Dialog */}
+      {/* ============================================================ */}
+      {/* Step 1: Plan Selection Dialog — with duration tabs           */}
+      {/* ============================================================ */}
       <Dialog open={purchaseDialogOpen} onOpenChange={setPurchaseDialogOpen}>
-        <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <ShoppingCart className="size-5 text-primary" />
               Choose a Subscription Plan
             </DialogTitle>
             <DialogDescription>
-              Select a plan that fits your needs. You can manage your subscriptions anytime.
+              Select a plan that fits your needs. Browse by duration, then pick your plan.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-4 py-2">
-            {activePlans.map((plan) => (
-              <Card
-                key={plan.id}
-                className="cursor-pointer border-border/50 hover:border-primary/50 hover:bg-primary/5 transition-all group"
-                onClick={() => handleSelectPlan(plan.id)}
-              >
-                <CardContent className="p-4 sm:p-5">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div className="space-y-2">
+          <Tabs defaultValue={defaultDurationTab} className="w-full">
+            <TabsList className="flex w-full flex-wrap gap-1 h-auto p-1">
+              {DURATION_ORDER.map((dur) => {
+                const plans = plansByDuration[dur]
+                if (!plans || plans.length === 0) return null
+                return (
+                  <TabsTrigger key={dur} value={dur} className="text-xs px-3 py-1.5">
+                    {getDurationLabel(dur)}
+                  </TabsTrigger>
+                )
+              })}
+            </TabsList>
+
+            {DURATION_ORDER.map((dur) => {
+              const plans = plansByDuration[dur]
+              if (!plans || plans.length === 0) return null
+              return (
+                <TabsContent key={dur} value={dur}>
+                  <div className="grid gap-3 pt-2">
+                    {plans.map((plan) => {
+                      const isSelected = selectedPlanId === plan.id
+                      const baseTotal = calculateDevicePrice(plan.basePrice, plan.devicePricing, 1)
+                      return (
+                        <Card
+                          key={plan.id}
+                          className={`cursor-pointer transition-all group ${
+                            isSelected
+                              ? 'border-primary bg-primary/5 ring-1 ring-primary/30'
+                              : 'border-border/50 hover:border-primary/50 hover:bg-primary/5'
+                          }`}
+                          onClick={() => handleSelectPlan(plan.id)}
+                        >
+                          <CardContent className="p-4 sm:p-5">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                              <div className="space-y-2 flex-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <h3 className="font-semibold text-base">{plan.name}</h3>
+                                  {plan.isFeatured && (
+                                    <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 gap-1 text-xs">
+                                      <Star className="size-3" />
+                                      Recommended
+                                    </Badge>
+                                  )}
+                                  <Badge variant="outline" className="text-xs">
+                                    <Clock className="size-3 mr-1" />
+                                    {getDurationLabel(plan.duration)}
+                                  </Badge>
+                                </div>
+                                <p className="text-sm text-muted-foreground">{plan.description}</p>
+                                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                                  <span className="flex items-center gap-1">
+                                    <Zap className="size-3.5 text-amber-400" />
+                                    {plan.speed}
+                                  </span>
+                                  <span className="flex items-center gap-1">
+                                    <Wifi className="size-3.5 text-teal-400" />
+                                    <Badge
+                                      variant="outline"
+                                      className={`text-xs ${
+                                        plan.bandwidthType === 'unlimited'
+                                          ? 'border-emerald-500/30 text-emerald-400'
+                                          : 'border-border text-muted-foreground'
+                                      }`}
+                                    >
+                                      {plan.bandwidthLimit}
+                                    </Badge>
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-4">
+                                <div className="text-right">
+                                  <div className="text-xl font-bold">৳{baseTotal.toFixed(2)}</div>
+                                  <div className="text-xs text-muted-foreground">starting / 1 device</div>
+                                </div>
+                                <div className={`rounded-full p-2 transition-colors ${
+                                  isSelected
+                                    ? 'bg-primary text-primary-foreground'
+                                    : 'bg-muted text-muted-foreground group-hover:bg-primary group-hover:text-primary-foreground'
+                                }`}>
+                                  {isSelected ? (
+                                    <Check className="size-4" />
+                                  ) : (
+                                    <ChevronRight className="size-4" />
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )
+                    })}
+                  </div>
+                </TabsContent>
+              )
+            })}
+          </Tabs>
+
+          {/* Device & Price Configuration — shown once a plan is selected */}
+          {selectedPlan && (
+            <div className="space-y-4 pt-4 border-t">
+              <div className="flex items-center gap-2">
+                <HardDrive className="size-4 text-primary" />
+                <span className="font-medium text-sm">Select Number of Devices</span>
+              </div>
+
+              {/* Visual device selector: 5 circles */}
+              <div className="flex items-center gap-3 justify-center">
+                {([1, 2, 3, 4, 5] as const).map((d) => {
+                  const dPrice = calculateDevicePrice(selectedPlan.basePrice, selectedPlan.devicePricing, d)
+                  const dPerDevice = getPerDeviceCost(dPrice, d)
+                  const dSavings = getSavingsPercent(selectedPlan.basePrice, selectedPlan.devicePricing, d)
+                  const isSelected = selectedDevices === d
+
+                  return (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => setSelectedDevices(d)}
+                      className={`flex flex-col items-center gap-1.5 rounded-xl px-3 py-3 transition-all border-2 min-w-[64px] ${
+                        isSelected
+                          ? 'border-primary bg-primary/10 text-primary shadow-sm'
+                          : 'border-border/50 hover:border-primary/40 hover:bg-primary/5 text-muted-foreground'
+                      }`}
+                    >
+                      <div className="flex items-center gap-0.5">
+                        {Array.from({ length: d }).map((_, i) => (
+                          <Monitor key={i} className={`size-3.5 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
+                        ))}
+                      </div>
+                      <span className={`text-xs font-semibold ${isSelected ? 'text-primary' : 'text-muted-foreground'}`}>
+                        {d} {d === 1 ? 'device' : 'devices'}
+                      </span>
+                      <span className="text-xs font-bold">৳{dPrice.toFixed(0)}</span>
+                      {dSavings > 0 && (
+                        <Badge className="text-[10px] px-1.5 py-0 h-4 bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
+                          Save {dSavings}%
+                        </Badge>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+
+              {/* Live pricing summary */}
+              <Card className="border-primary/20 bg-primary/5">
+                <CardContent className="p-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <h3 className="font-semibold text-base">{plan.name}</h3>
+                        <span className="font-semibold">{selectedPlan.name}</span>
                         <Badge variant="outline" className="text-xs">
-                          {plan.period}
+                          {getDurationLabel(selectedPlan.duration)}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">
+                          {selectedDevices} device{selectedDevices > 1 ? 's' : ''}
                         </Badge>
                       </div>
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Zap className="size-3.5 text-amber-400" />
-                          {plan.speed}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Globe className="size-3.5 text-blue-400" />
-                          {plan.dataLimit}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Monitor className="size-3.5 text-teal-400" />
-                          {plan.maxDevices} device{plan.maxDevices !== 1 ? 's' : ''}
-                        </span>
+                      <div className="text-sm text-muted-foreground">
+                        {selectedDevices > 1
+                          ? `৳${perDeviceCost.toFixed(2)} per device`
+                          : `৳${totalPrice.toFixed(2)} total`
+                        }
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <div className="text-right">
-                        <div className="text-xl font-bold">৳{plan.price.toFixed(2)}</div>
-                        <div className="text-xs text-muted-foreground">per {plan.period.toLowerCase()}</div>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="gap-1 group-hover:bg-primary group-hover:text-primary-foreground group-hover:border-primary transition-colors"
-                      >
-                        Select
-                        <ArrowRight className="size-3.5" />
-                      </Button>
+                    <div className="text-right space-y-1">
+                      <div className="text-2xl font-bold">৳{totalPrice.toFixed(2)}</div>
+                      {savingsPercent > 0 && (
+                        <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 gap-1">
+                          <Sparkles className="size-3" />
+                          Save {savingsPercent}% per device
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 </CardContent>
               </Card>
-            ))}
-          </div>
 
-          <DialogFooter>
+              {/* Plan features list */}
+              <div className="space-y-1.5">
+                <span className="text-sm font-medium">Includes:</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                  {selectedPlan.features.map((feat, i) => (
+                    <div key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Check className="size-3.5 text-emerald-400 shrink-0" />
+                      {feat}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="ghost" onClick={() => setPurchaseDialogOpen(false)}>
               Cancel
             </Button>
+            {selectedPlan && (
+              <Button className="gap-1.5" onClick={handleProceedToCheckout}>
+                Proceed to Checkout
+                <ArrowRight className="size-4" />
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Confirm Purchase Dialog */}
+      {/* ============================================================ */}
+      {/* Step 3: Confirm Purchase Dialog                              */}
+      {/* ============================================================ */}
       <Dialog open={confirmDialogOpen} onOpenChange={(open) => { if (!open) handleCancelPurchase() }}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Check className="size-5 text-emerald-400" />
@@ -469,28 +695,82 @@ export function OverviewPage() {
                 <CardContent className="p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-lg">{selectedPlan.name}</span>
-                    <Badge variant="outline">{selectedPlan.period}</Badge>
+                    <Badge variant="outline">{getDurationLabel(selectedPlan.duration)}</Badge>
                   </div>
+                  <p className="text-sm text-muted-foreground">{selectedPlan.description}</p>
                   <Separator />
                   <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div className="text-muted-foreground">Duration</div>
+                    <div className="text-right font-medium">{getDurationLabel(selectedPlan.duration)}</div>
                     <div className="text-muted-foreground">Speed</div>
                     <div className="text-right font-medium">{selectedPlan.speed}</div>
-                    <div className="text-muted-foreground">Data Limit</div>
-                    <div className="text-right font-medium">{selectedPlan.dataLimit}</div>
-                    <div className="text-muted-foreground">Max Devices</div>
-                    <div className="text-right font-medium">{selectedPlan.maxDevices}</div>
-                    <div className="text-muted-foreground">Price</div>
-                    <div className="text-right font-bold text-lg">
-                      {couponDiscount > 0 ? (
-                        <div className="space-y-1">
-                          <span className="line-through text-muted-foreground text-sm">৳{selectedPlan.price.toFixed(2)}</span>
-                          <div className="text-emerald-400">৳{finalPrice.toFixed(2)}</div>
-                        </div>
-                      ) : (
-                        `৳${selectedPlan.price.toFixed(2)}`
-                      )}
+                    <div className="text-muted-foreground">Bandwidth</div>
+                    <div className="text-right font-medium">
+                      <Badge
+                        variant="outline"
+                        className={`text-xs ${
+                          selectedPlan.bandwidthType === 'unlimited'
+                            ? 'border-emerald-500/30 text-emerald-400'
+                            : ''
+                        }`}
+                      >
+                        {selectedPlan.bandwidthLimit}
+                      </Badge>
+                    </div>
+                    <div className="text-muted-foreground">Devices</div>
+                    <div className="text-right font-medium">
+                      {selectedDevices} device{selectedDevices > 1 ? 's' : ''}
                     </div>
                   </div>
+                </CardContent>
+              </Card>
+
+              {/* Price Breakdown */}
+              <Card className="border-border/50">
+                <CardContent className="p-4 space-y-2.5">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Wallet className="size-4 text-primary" />
+                    <span className="font-medium text-sm">Price Breakdown</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Base price (1 device)</span>
+                    <span className="font-medium">৳{calculateDevicePrice(selectedPlan.basePrice, selectedPlan.devicePricing, 1).toFixed(2)}</span>
+                  </div>
+                  {selectedDevices > 1 && (
+                    <>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">
+                          Device multiplier ({selectedDevices} devices — {selectedPlan.devicePricing[selectedDevices]}% of base)
+                        </span>
+                        <span className="font-medium">৳{totalPrice.toFixed(2)}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Per-device cost</span>
+                        <span className="font-medium">৳{perDeviceCost.toFixed(2)}</span>
+                      </div>
+                      {savingsPercent > 0 && (
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Multi-device savings</span>
+                          <span className="font-medium text-emerald-400">Save {savingsPercent}%</span>
+                        </div>
+                      )}
+                    </>
+                  )}
+                  {selectedDevices === 1 && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Total price</span>
+                      <span className="font-bold text-lg">৳{totalPrice.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {selectedDevices > 1 && (
+                    <>
+                      <Separator />
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="font-medium">Total price</span>
+                        <span className="font-bold text-lg">৳{totalPrice.toFixed(2)}</span>
+                      </div>
+                    </>
+                  )}
                 </CardContent>
               </Card>
 
@@ -554,14 +834,30 @@ export function OverviewPage() {
                 </CardContent>
               </Card>
 
-              {/* Balance Check */}
+              {/* Final Price & Balance Check */}
               <Card className={`border-border/50 ${balance < finalPrice ? 'border-red-500/30 bg-red-500/5' : 'border-emerald-500/30 bg-emerald-500/5'}`}>
-                <CardContent className="p-4">
+                <CardContent className="p-4 space-y-2.5">
+                  {couponDiscount > 0 && (
+                    <>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Original Price</span>
+                        <span className="line-through text-muted-foreground">৳{totalPrice.toFixed(2)}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Coupon Discount</span>
+                        <span className="font-semibold text-emerald-400">-৳{couponDiscount.toFixed(2)}</span>
+                      </div>
+                    </>
+                  )}
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold">Final Price</span>
+                    <span className="text-xl font-bold">৳{finalPrice.toFixed(2)}</span>
+                  </div>
+                  <Separator />
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Current Balance</span>
                     <span className="font-semibold">৳{balance.toFixed(2)}</span>
                   </div>
-                  <Separator className="my-2" />
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">
                       {couponDiscount > 0 ? 'After Purchase (with discount)' : 'After Purchase'}
@@ -572,10 +868,12 @@ export function OverviewPage() {
                   </div>
                   {couponDiscount > 0 && (
                     <>
-                      <Separator className="my-2" />
+                      <Separator />
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">You Save</span>
-                        <span className="font-semibold text-emerald-400">৳{couponDiscount.toFixed(2)}</span>
+                        <span className="text-muted-foreground">Total Savings</span>
+                        <span className="font-semibold text-emerald-400">
+                          ৳{(couponDiscount + (selectedDevices > 1 ? (calculateDevicePrice(selectedPlan.basePrice, selectedPlan.devicePricing, 1) * selectedDevices - totalPrice) : 0)).toFixed(2)}
+                        </span>
                       </div>
                     </>
                   )}
@@ -609,14 +907,17 @@ export function OverviewPage() {
             </div>
           )}
 
-          <DialogFooter>
-            <Button variant="outline" onClick={handleCancelPurchase}>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={handleBackToPlans}>
+              Back
+            </Button>
+            <Button variant="ghost" onClick={handleCancelPurchase}>
               Cancel
             </Button>
             {selectedPlan && balance >= finalPrice && (
               <Button className="gap-1.5" onClick={handleConfirmPurchase}>
                 <Check className="size-4" />
-                Confirm Purchase
+                Confirm Purchase — ৳{finalPrice.toFixed(2)}
               </Button>
             )}
           </DialogFooter>

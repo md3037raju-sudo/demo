@@ -99,10 +99,7 @@ function SubStatusBadge({ status }: { status: SubStatus }) {
 }
 
 function PlanTypeBadge({ plan }: { plan: string }) {
-  if (plan === 'Yearly') {
-    return <Badge className="bg-primary/20 text-primary border-primary/30 hover:bg-primary/20">Yearly</Badge>
-  }
-  return <Badge variant="secondary">Monthly</Badge>
+  return <Badge variant="secondary">{plan}</Badge>
 }
 
 export function AdminSubscriptions() {
@@ -323,7 +320,8 @@ export function AdminSubscriptions() {
             </TableRow>
           ) : (
             subs.map((sub) => {
-              const bandwidthPct = Math.round((sub.bandwidthUsed / sub.bandwidthLimit) * 100)
+              const isUnlimited = sub.bandwidthLimit === 0
+              const bandwidthPct = isUnlimited ? 0 : Math.round((sub.bandwidthUsed / sub.bandwidthLimit) * 100)
               return (
                 <TableRow key={sub.id}>
                   <TableCell className="font-mono text-xs">{sub.id}</TableCell>
@@ -337,19 +335,26 @@ export function AdminSubscriptions() {
                   <TableCell className="min-w-[180px]">
                     <div className="space-y-1">
                       <div className="flex items-center justify-between text-xs">
-                        <span>{sub.bandwidthUsed} / {sub.bandwidthLimit} GB</span>
-                        <span className="text-muted-foreground">{bandwidthPct}%</span>
+                        <span>{isUnlimited ? `${sub.bandwidthUsed} GB / Unlimited` : `${sub.bandwidthUsed} / ${sub.bandwidthLimit} GB`}</span>
+                        <span className="text-muted-foreground">{isUnlimited ? '∞' : `${bandwidthPct}%`}</span>
                       </div>
-                      <Progress
-                        value={bandwidthPct}
-                        className={`h-2 ${
-                          bandwidthPct > 90
-                            ? '[&>[data-slot=progress-indicator]]:bg-red-500'
-                            : bandwidthPct > 70
-                            ? '[&>[data-slot=progress-indicator]]:bg-amber-500'
-                            : '[&>[data-slot=progress-indicator]]:bg-emerald-500'
-                        }`}
-                      />
+                      {!isUnlimited && (
+                        <Progress
+                          value={bandwidthPct}
+                          className={`h-2 ${
+                            bandwidthPct > 90
+                              ? '[&>[data-slot=progress-indicator]]:bg-red-500'
+                              : bandwidthPct > 70
+                              ? '[&>[data-slot=progress-indicator]]:bg-amber-500'
+                              : '[&>[data-slot=progress-indicator]]:bg-emerald-500'
+                          }`}
+                        />
+                      )}
+                      {isUnlimited && (
+                        <div className="h-2 rounded-full bg-emerald-500/20">
+                          <div className="h-full rounded-full bg-emerald-500" style={{ width: '100%' }} />
+                        </div>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
@@ -623,13 +628,13 @@ export function AdminSubscriptions() {
                   <p className="text-xs text-muted-foreground uppercase tracking-wider">Bandwidth Usage</p>
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between text-sm">
-                      <span>{viewSub.bandwidthUsed} / {viewSub.bandwidthLimit} GB</span>
+                      <span>{viewSub.bandwidthLimit === 0 ? `${viewSub.bandwidthUsed} GB / Unlimited` : `${viewSub.bandwidthUsed} / ${viewSub.bandwidthLimit} GB`}</span>
                       <span className="text-muted-foreground">
-                        {Math.round((viewSub.bandwidthUsed / viewSub.bandwidthLimit) * 100)}%
+                        {viewSub.bandwidthLimit === 0 ? '∞' : `${Math.round((viewSub.bandwidthUsed / viewSub.bandwidthLimit) * 100)}%`}
                       </span>
                     </div>
                     <Progress
-                      value={Math.round((viewSub.bandwidthUsed / viewSub.bandwidthLimit) * 100)}
+                      value={viewSub.bandwidthLimit === 0 ? 100 : Math.round((viewSub.bandwidthUsed / viewSub.bandwidthLimit) * 100)}
                       className="h-2"
                     />
                   </div>
