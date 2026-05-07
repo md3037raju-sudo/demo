@@ -36,6 +36,7 @@ import {
   Globe,
 } from 'lucide-react'
 import { ThemeToggle } from '@/components/shared/theme-toggle'
+import { AnimateIn } from '@/components/shared/animate-in'
 
 export function LandingPage() {
   const navigate = useNavigationStore((s) => s.navigate)
@@ -169,7 +170,7 @@ export function LandingPage() {
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-20 sm:py-28 lg:py-36">
           <div className="flex flex-col items-center text-center">
             {/* Decorative Shield */}
-            <div className="relative mb-8">
+            <AnimateIn type="scale-in" className="relative mb-8">
               <div className="relative flex items-center justify-center">
                 <div className="absolute size-32 rounded-full bg-primary/10 animate-pulse" />
                 <div className="absolute size-24 rounded-full bg-primary/15" />
@@ -182,55 +183,65 @@ export function LandingPage() {
               <div className="absolute inset-0 animate-[spin_8s_linear_infinite_reverse]">
                 <div className="absolute bottom-0 left-1/2 -translate-x-1/2 size-1.5 rounded-full bg-primary/40" />
               </div>
-            </div>
+            </AnimateIn>
 
-            <Badge variant="secondary" className="mb-6 gap-1.5 px-3 py-1 text-sm">
-              <ShieldCheck className="size-3.5" />
-              Clash-Powered VPN
-            </Badge>
+            <AnimateIn type="fade-in" delay={100}>
+              <Badge variant="secondary" className="mb-6 gap-1.5 px-3 py-1 text-sm">
+                <ShieldCheck className="size-3.5" />
+                Clash-Powered VPN
+              </Badge>
+            </AnimateIn>
 
-            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
-              Fast & Secure Proxy,{' '}
-              <span className="text-primary">Simplified</span>
-            </h1>
+            <AnimateIn type="slide-up" delay={200}>
+              <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
+                Fast & Secure Proxy,{' '}
+                <span className="text-primary">Simplified</span>
+              </h1>
+            </AnimateIn>
 
-            <p className="mt-6 max-w-2xl text-lg text-muted-foreground sm:text-xl">
-              CoreX delivers blazing-fast proxy servers with military-grade
-              encryption. Browse privately with our Clash-powered app — multiple
-              protocols, load-balanced nodes, and seamless connectivity.
-            </p>
+            <AnimateIn type="slide-up" delay={350}>
+              <p className="mt-6 max-w-2xl text-lg text-muted-foreground sm:text-xl">
+                CoreX delivers blazing-fast proxy servers with military-grade
+                encryption. Browse privately with our Clash-powered app — multiple
+                protocols, load-balanced nodes, and seamless connectivity.
+              </p>
+            </AnimateIn>
 
-            <div className="mt-10 flex flex-col gap-4 sm:flex-row">
-              <Button size="lg" onClick={handleGetStarted} className="gap-2">
-                Get CoreX
-                <ArrowRight className="size-4" />
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                onClick={() => navigate('about')}
-                className="gap-2"
-              >
-                Learn More
-                <ArrowRight className="size-4" />
-              </Button>
-            </div>
+            <AnimateIn type="slide-up" delay={500}>
+              <div className="mt-10 flex flex-col gap-4 sm:flex-row">
+                <Button size="lg" onClick={handleGetStarted} className="gap-2">
+                  Get CoreX
+                  <ArrowRight className="size-4" />
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={() => navigate('about')}
+                  className="gap-2"
+                >
+                  Learn More
+                  <ArrowRight className="size-4" />
+                </Button>
+              </div>
+            </AnimateIn>
 
             {/* Trust indicators */}
-            <div className="mt-12 flex flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground">
-              <div className="flex items-center gap-1.5">
-                <CheckCircle2 className="size-4 text-primary" />
-                No credit card required
+            <AnimateIn type="fade-in" delay={650}>
+              <div className="mt-12 flex flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground">
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle2 className="size-4 text-primary" />
+                  No credit card required
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle2 className="size-4 text-primary" />
+                  Setup in 2 minutes
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle2 className="size-4 text-primary" />
+                  Works with Clash
+                </div>
               </div>
-              <div className="flex items-center gap-1.5">
-                <CheckCircle2 className="size-4 text-primary" />
-                Setup in 2 minutes
-              </div>
-              <div className="flex items-center gap-1.5">
-                <CheckCircle2 className="size-4 text-primary" />
-                Works with Clash
-              </div>
-            </div>
+            </AnimateIn>
           </div>
         </div>
       </section>
@@ -238,128 +249,136 @@ export function LandingPage() {
       {/* ── Features Section ── */}
       <section className="border-t bg-background">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-20 sm:py-28">
-          <div className="text-center mb-14">
-            <Badge variant="outline" className="mb-4">
-              Features
-            </Badge>
-            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-              Everything You Need to{' '}
-              <span className="text-primary">Browse Privately</span>
-            </h2>
-            <p className="mt-4 text-muted-foreground text-lg max-w-2xl mx-auto">
-              From multi-protocol support to load-balanced nodes, CoreX
-              provides everything you need for fast, private browsing.
-            </p>
-          </div>
+          <AnimateIn type="slide-up" delay={100}>
+            <div className="text-center mb-14">
+              <Badge variant="outline" className="mb-4">
+                Features
+              </Badge>
+              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+                Everything You Need to{' '}
+                <span className="text-primary">Browse Privately</span>
+              </h2>
+              <p className="mt-4 text-muted-foreground text-lg max-w-2xl mx-auto">
+                From multi-protocol support to load-balanced nodes, CoreX
+                provides everything you need for fast, private browsing.
+              </p>
+            </div>
+          </AnimateIn>
 
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              {
-                icon: Globe,
-                title: 'Multi-Protocol Support',
-                description:
-                  'VLESS, VMess, Trojan, Shadowsocks, WireGuard, and more. All major protocols supported with full auth configuration.',
-              },
-              {
-                icon: Activity,
-                title: 'Load-Balanced Nodes',
-                description:
-                  'Smart proxy selection with load-balanced subgroups. Always connect to the fastest available server automatically.',
-              },
-              {
-                icon: Fingerprint,
-                title: 'Seamless Authentication',
-                description:
-                  'Secure login via Google & Telegram only. No passwords to remember, no phishing vectors.',
-              },
-              {
-                icon: Activity,
-                title: 'Real-time Monitoring',
-                description:
-                  'Track your subscription status, bandwidth usage, and connected devices in real-time.',
-              },
-            ].map((feature) => (
-              <Card
-                key={feature.title}
-                className="group relative overflow-hidden transition-all duration-300 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-1"
-              >
-                <CardHeader>
-                  <div className="mb-2 flex size-12 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary/15">
-                    <feature.icon className="size-6" />
-                  </div>
-                  <CardTitle className="text-lg">{feature.title}</CardTitle>
-                  <CardDescription className="text-sm leading-relaxed">
-                    {feature.description}
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-            ))}
-          </div>
+          <AnimateIn type="slide-up" stagger delay={200}>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              {[
+                {
+                  icon: Globe,
+                  title: 'Multi-Protocol Support',
+                  description:
+                    'VLESS, VMess, Trojan, Shadowsocks, WireGuard, and more. All major protocols supported with full auth configuration.',
+                },
+                {
+                  icon: Activity,
+                  title: 'Load-Balanced Nodes',
+                  description:
+                    'Smart proxy selection with load-balanced subgroups. Always connect to the fastest available server automatically.',
+                },
+                {
+                  icon: Fingerprint,
+                  title: 'Seamless Authentication',
+                  description:
+                    'Secure login via Google & Telegram only. No passwords to remember, no phishing vectors.',
+                },
+                {
+                  icon: Activity,
+                  title: 'Real-time Monitoring',
+                  description:
+                    'Track your subscription status, bandwidth usage, and connected devices in real-time.',
+                },
+              ].map((feature) => (
+                <Card
+                  key={feature.title}
+                  className="group relative overflow-hidden transition-all duration-300 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-1"
+                >
+                  <CardHeader>
+                    <div className="mb-2 flex size-12 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary/15">
+                      <feature.icon className="size-6" />
+                    </div>
+                    <CardTitle className="text-lg">{feature.title}</CardTitle>
+                    <CardDescription className="text-sm leading-relaxed">
+                      {feature.description}
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
+              ))}
+            </div>
+          </AnimateIn>
         </div>
       </section>
 
       {/* ── Security Highlights Section ── */}
       <section className="border-t bg-secondary/30">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-20 sm:py-28">
-          <div className="text-center mb-14">
-            <Badge variant="outline" className="mb-4">
-              Infrastructure
-            </Badge>
-            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-              Built on a Foundation of{' '}
-              <span className="text-primary">Reliability</span>
-            </h2>
-            <p className="mt-4 text-muted-foreground text-lg max-w-2xl mx-auto">
-              Robust infrastructure ensures your proxy connections stay fast,
-              secure, and always available.
-            </p>
-          </div>
+          <AnimateIn type="slide-up" delay={100}>
+            <div className="text-center mb-14">
+              <Badge variant="outline" className="mb-4">
+                Infrastructure
+              </Badge>
+              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+                Built on a Foundation of{' '}
+                <span className="text-primary">Reliability</span>
+              </h2>
+              <p className="mt-4 text-muted-foreground text-lg max-w-2xl mx-auto">
+                Robust infrastructure ensures your proxy connections stay fast,
+                secure, and always available.
+              </p>
+            </div>
+          </AnimateIn>
 
-          <div className="grid gap-6 sm:grid-cols-3">
-            {[
-              {
-                icon: Lock,
-                badge: 'Encryption',
-                title: '256-bit Encryption',
-                description:
-                  'AES-256 encryption on all proxy connections. Your traffic stays private and secure.',
-              },
-              {
-                icon: Eye,
-                badge: 'Privacy',
-                title: 'Zero Data Leaks',
-                description:
-                  'No DNS leaks, no WebRTC leaks. Your real IP stays hidden — guaranteed.',
-              },
-              {
-                icon: ShieldCheck,
-                badge: 'Reliability',
-                title: '99.9% Uptime',
-                description:
-                  'Redundant server infrastructure ensures you\'re always connected. Auto-failover to backup nodes.',
-              },
-            ].map((item) => (
-              <Card
-                key={item.title}
-                className="group transition-all duration-300 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5"
-              >
-                <CardHeader>
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary/15">
-                      <item.icon className="size-5" />
+          <AnimateIn type="slide-up" stagger delay={200}>
+            <div className="grid gap-6 sm:grid-cols-3">
+              {[
+                {
+                  icon: Lock,
+                  badge: 'Encryption',
+                  title: '256-bit Encryption',
+                  description:
+                    'AES-256 encryption on all proxy connections. Your traffic stays private and secure.',
+                },
+                {
+                  icon: Eye,
+                  badge: 'Privacy',
+                  title: 'Zero Data Leaks',
+                  description:
+                    'No DNS leaks, no WebRTC leaks. Your real IP stays hidden — guaranteed.',
+                },
+                {
+                  icon: ShieldCheck,
+                  badge: 'Reliability',
+                  title: '99.9% Uptime',
+                  description:
+                    'Redundant server infrastructure ensures you\'re always connected. Auto-failover to backup nodes.',
+                },
+              ].map((item) => (
+                <Card
+                  key={item.title}
+                  className="group transition-all duration-300 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5"
+                >
+                  <CardHeader>
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary/15">
+                        <item.icon className="size-5" />
+                      </div>
+                      <Badge variant="secondary" className="text-xs">
+                        {item.badge}
+                      </Badge>
                     </div>
-                    <Badge variant="secondary" className="text-xs">
-                      {item.badge}
-                    </Badge>
-                  </div>
-                  <CardTitle className="text-xl">{item.title}</CardTitle>
-                  <CardDescription className="leading-relaxed">
-                    {item.description}
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-            ))}
-          </div>
+                    <CardTitle className="text-xl">{item.title}</CardTitle>
+                    <CardDescription className="leading-relaxed">
+                      {item.description}
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
+              ))}
+            </div>
+          </AnimateIn>
         </div>
       </section>
 
@@ -372,29 +391,37 @@ export function LandingPage() {
           </div>
 
           <div className="relative flex flex-col items-center text-center">
-            <div className="flex size-16 items-center justify-center rounded-2xl bg-primary/10 text-primary mb-6">
-              <Zap className="size-8" />
-            </div>
-            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-              Ready to Browse Privately?
-            </h2>
-            <p className="mt-4 text-muted-foreground text-lg max-w-xl">
-              Join thousands of users who trust CoreX for fast, secure proxy
-              access. Get started in minutes.
-            </p>
-            <div className="mt-8 flex flex-col gap-4 sm:flex-row">
-              <Button size="lg" onClick={handleGetStarted} className="gap-2">
-                Get CoreX
-                <ArrowRight className="size-4" />
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                onClick={() => navigate('about')}
-              >
-                Learn More
-              </Button>
-            </div>
+            <AnimateIn type="scale-in">
+              <div className="flex size-16 items-center justify-center rounded-2xl bg-primary/10 text-primary mb-6">
+                <Zap className="size-8" />
+              </div>
+            </AnimateIn>
+            <AnimateIn type="slide-up" delay={100}>
+              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+                Ready to Browse Privately?
+              </h2>
+            </AnimateIn>
+            <AnimateIn type="slide-up" delay={200}>
+              <p className="mt-4 text-muted-foreground text-lg max-w-xl">
+                Join thousands of users who trust CoreX for fast, secure proxy
+                access. Get started in minutes.
+              </p>
+            </AnimateIn>
+            <AnimateIn type="slide-up" delay={350}>
+              <div className="mt-8 flex flex-col gap-4 sm:flex-row">
+                <Button size="lg" onClick={handleGetStarted} className="gap-2">
+                  Get CoreX
+                  <ArrowRight className="size-4" />
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={() => navigate('about')}
+                >
+                  Learn More
+                </Button>
+              </div>
+            </AnimateIn>
           </div>
         </div>
       </section>

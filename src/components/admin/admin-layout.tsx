@@ -45,6 +45,7 @@ import {
   ShieldCheck,
 } from 'lucide-react'
 import { ThemeToggle } from '@/components/shared/theme-toggle'
+import { AnimateIn } from '@/components/shared/animate-in'
 import { AdminDashboard } from './admin-dashboard'
 import { AdminUsers } from './admin-users'
 import { AdminSubscriptions } from './admin-subscriptions'
@@ -125,35 +126,35 @@ function getPageTitle(page: string): string {
 function renderAdminPage(page: string) {
   switch (page) {
     case 'admin':
-      return <AdminDashboard />
+      return <AnimateIn type="slide-up" key="admin-dashboard"><AdminDashboard /></AnimateIn>
     case 'admin/users':
-      return <AdminUsers />
+      return <AnimateIn type="slide-up" key="admin-users"><AdminUsers /></AnimateIn>
     case 'admin/subscriptions':
-      return <AdminSubscriptions />
+      return <AnimateIn type="slide-up" key="admin-subs"><AdminSubscriptions /></AnimateIn>
     case 'admin/proxiespreset':
-      return <AdminProxiesPreset />
+      return <AnimateIn type="slide-up" key="admin-proxies"><AdminProxiesPreset /></AnimateIn>
     case 'admin/plans':
-      return <AdminPlans />
+      return <AnimateIn type="slide-up" key="admin-plans"><AdminPlans /></AnimateIn>
     case 'admin/payments':
-      return <AdminPayments />
+      return <AnimateIn type="slide-up" key="admin-payments"><AdminPayments /></AnimateIn>
     case 'admin/rules':
-      return <AdminRules />
+      return <AnimateIn type="slide-up" key="admin-rules"><AdminRules /></AnimateIn>
     case 'admin/logs':
-      return <AdminLogs />
+      return <AnimateIn type="slide-up" key="admin-logs"><AdminLogs /></AnimateIn>
     case 'admin/devices':
-      return <AdminDevices />
+      return <AnimateIn type="slide-up" key="admin-devices"><AdminDevices /></AnimateIn>
     case 'admin/db-init':
-      return <AdminDbInit />
+      return <AnimateIn type="slide-up" key="admin-dbinit"><AdminDbInit /></AnimateIn>
     case 'admin/broadcast':
-      return <AdminBroadcast />
+      return <AnimateIn type="slide-up" key="admin-broadcast"><AdminBroadcast /></AnimateIn>
     case 'admin/tickets':
-      return <AdminTickets />
+      return <AnimateIn type="slide-up" key="admin-tickets"><AdminTickets /></AnimateIn>
     case 'admin/cms':
-      return <AdminCMS />
+      return <AnimateIn type="slide-up" key="admin-cms"><AdminCMS /></AnimateIn>
     case 'admin/coupons':
-      return <AdminCoupons />
+      return <AnimateIn type="slide-up" key="admin-coupons"><AdminCoupons /></AnimateIn>
     default:
-      return <AdminDashboard />
+      return <AnimateIn type="slide-up" key="admin-default"><AdminDashboard /></AnimateIn>
   }
 }
 

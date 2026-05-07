@@ -43,6 +43,7 @@ import {
   X,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { AnimateIn } from '@/components/shared/animate-in'
 
 interface Subscription {
   id: string
@@ -289,20 +290,22 @@ export function OverviewPage() {
 
       {/* Stats Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => (
-          <Card key={stat.title}>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {stat.title}
-              </CardTitle>
-              <div className={`rounded-lg p-2 ${stat.bg}`}>
-                <stat.icon className={`size-4 ${stat.color}`} />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
-            </CardContent>
-          </Card>
+        {stats.map((stat, i) => (
+          <AnimateIn key={stat.title} type="slide-up" delay={i * 60}>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  {stat.title}
+                </CardTitle>
+                <div className={`rounded-lg p-2 ${stat.bg}`}>
+                  <stat.icon className={`size-4 ${stat.color}`} />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stat.value}</div>
+              </CardContent>
+            </Card>
+          </AnimateIn>
         ))}
       </div>
 

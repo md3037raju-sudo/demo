@@ -20,6 +20,7 @@ import { useNavigationStore } from '@/lib/navigation-store'
 import { useAuthStore } from '@/lib/auth-store'
 import { use2FAStore } from '@/lib/2fa-store'
 import { useReferralStore } from '@/lib/referral-store'
+import { AnimateIn } from '@/components/shared/animate-in'
 
 function GoogleIcon() {
   return (
@@ -174,7 +175,8 @@ export function LoginPage() {
       </button>
 
       {/* Login Card */}
-      <Card className="w-full max-w-md bg-card border-border/50 shadow-2xl">
+      <AnimateIn type="scale-in">
+        <Card className="w-full max-w-md bg-card border-border/50 shadow-2xl">
         <CardHeader className="items-center text-center gap-4">
           {/* Logo */}
           <div className="flex items-center gap-2.5">
@@ -252,6 +254,7 @@ export function LoginPage() {
           </div>
         </CardContent>
       </Card>
+      </AnimateIn>
 
       {/* Admin Detection Dialog */}
       <Dialog open={adminDialogOpen} onOpenChange={setAdminDialogOpen}>

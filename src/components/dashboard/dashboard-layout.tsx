@@ -36,6 +36,7 @@ import {
   Palette,
 } from 'lucide-react'
 import { ThemeToggle } from '@/components/shared/theme-toggle'
+import { AnimateIn } from '@/components/shared/animate-in'
 import { OverviewPage } from './overview-page'
 import { SubscriptionsPage } from './subscriptions-page'
 import { ActiveDevicesPage } from './active-devices-page'
@@ -89,21 +90,21 @@ function getPageTitle(page: string): string {
 function renderPage(page: string) {
   switch (page) {
     case 'dashboard':
-      return <OverviewPage />
+      return <AnimateIn type="slide-up" key="dashboard"><OverviewPage /></AnimateIn>
     case 'dashboard/subscriptions':
-      return <SubscriptionsPage />
+      return <AnimateIn type="slide-up" key="subscriptions"><SubscriptionsPage /></AnimateIn>
     case 'dashboard/activedevices':
-      return <ActiveDevicesPage />
+      return <AnimateIn type="slide-up" key="activedevices"><ActiveDevicesPage /></AnimateIn>
     case 'dashboard/payments':
-      return <PaymentsPage />
+      return <AnimateIn type="slide-up" key="payments"><PaymentsPage /></AnimateIn>
     case 'dashboard/referrals':
-      return <ReferralsPage />
+      return <AnimateIn type="slide-up" key="referrals"><ReferralsPage /></AnimateIn>
     case 'dashboard/themes':
-      return <ThemePage />
+      return <AnimateIn type="slide-up" key="themes"><ThemePage /></AnimateIn>
     case 'dashboard/settings':
-      return <SettingsPage />
+      return <AnimateIn type="slide-up" key="settings"><SettingsPage /></AnimateIn>
     default:
-      return <OverviewPage />
+      return <AnimateIn type="slide-up" key="default"><OverviewPage /></AnimateIn>
   }
 }
 

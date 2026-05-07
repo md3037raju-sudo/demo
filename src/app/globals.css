@@ -317,40 +317,156 @@
 
 /* ===== Animation System ===== */
 
+/* ── When animations are OFF: kill all transitions/animations instantly ── */
+:not(.animate-enabled) * {
+  transition-duration: 0ms !important;
+  animation-duration: 0ms !important;
+  animation-delay: 0ms !important;
+}
+
+/* ── When animations are ON: global smooth transitions ── */
 .animate-enabled * {
-  transition-property: color, background-color, border-color, box-shadow, transform, opacity;
-  transition-duration: 150ms;
+  transition-property: color, background-color, border-color, box-shadow, opacity;
+  transition-duration: 200ms;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.animate-enabled .animate-fade-in {
-  animation: fadeIn 0.3s ease-out;
+/* ── Hover effects on interactive elements ── */
+.animate-enabled button:not(:disabled) {
+  transition-property: color, background-color, border-color, box-shadow, transform, opacity;
+  transition-duration: 200ms;
 }
 
-.animate-enabled .animate-slide-up {
-  animation: slideUp 0.3s ease-out;
+.animate-enabled button:not(:disabled):hover {
+  transform: translateY(-1px);
 }
 
-.animate-enabled .animate-scale-in {
-  animation: scaleIn 0.2s ease-out;
+.animate-enabled button:not(:disabled):active {
+  transform: translateY(0) scale(0.98);
 }
 
-@keyframes fadeIn {
+/* ── Card hover & entrance ── */
+.animate-enabled [data-slot="card"] {
+  transition-property: color, background-color, border-color, box-shadow, transform, opacity;
+  transition-duration: 250ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.animate-enabled [data-slot="card"]:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px -5px oklch(0 0 0 / 0.1), 0 4px 10px -6px oklch(0 0 0 / 0.05);
+}
+
+.dark.animate-enabled [data-slot="card"]:hover {
+  box-shadow: 0 8px 25px -5px oklch(0 0 0 / 0.3), 0 4px 10px -6px oklch(0 0 0 / 0.2);
+}
+
+/* ── Link hover ── */
+.animate-enabled a,
+.animate-enabled [role="link"] {
+  transition-property: color, opacity;
+  transition-duration: 200ms;
+}
+
+/* ── Input focus glow ── */
+.animate-enabled input:focus,
+.animate-enabled textarea:focus,
+.animate-enabled select:focus {
+  transition-property: color, background-color, border-color, box-shadow;
+  transition-duration: 200ms;
+}
+
+/* ── Sidebar nav items ── */
+.animate-enabled nav button {
+  transition-property: color, background-color, border-color, box-shadow, transform, opacity;
+  transition-duration: 200ms;
+}
+
+/* ── Badge pulse ── */
+.animate-enabled [data-slot="badge"] {
+  transition-property: color, background-color, border-color;
+  transition-duration: 200ms;
+}
+
+/* ── Entrance Animations ── */
+.animate-enabled .anim-fade-in {
+  animation: corexFadeIn 0.4s ease-out both;
+}
+
+.animate-enabled .anim-slide-up {
+  animation: corexSlideUp 0.4s ease-out both;
+}
+
+.animate-enabled .anim-scale-in {
+  animation: corexScaleIn 0.3s ease-out both;
+}
+
+.animate-enabled .anim-slide-right {
+  animation: corexSlideRight 0.35s ease-out both;
+}
+
+/* ── Staggered children delays ── */
+.animate-enabled .anim-stagger > *:nth-child(1) { animation-delay: 0ms; }
+.animate-enabled .anim-stagger > *:nth-child(2) { animation-delay: 50ms; }
+.animate-enabled .anim-stagger > *:nth-child(3) { animation-delay: 100ms; }
+.animate-enabled .anim-stagger > *:nth-child(4) { animation-delay: 150ms; }
+.animate-enabled .anim-stagger > *:nth-child(5) { animation-delay: 200ms; }
+.animate-enabled .anim-stagger > *:nth-child(6) { animation-delay: 250ms; }
+.animate-enabled .anim-stagger > *:nth-child(7) { animation-delay: 300ms; }
+.animate-enabled .anim-stagger > *:nth-child(8) { animation-delay: 350ms; }
+.animate-enabled .anim-stagger > *:nth-child(9) { animation-delay: 400ms; }
+.animate-enabled .anim-stagger > *:nth-child(10) { animation-delay: 450ms; }
+.animate-enabled .anim-stagger > *:nth-child(n+11) { animation-delay: 500ms; }
+
+/* ── Keyframes ── */
+@keyframes corexFadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
 }
 
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(8px); }
+@keyframes corexSlideUp {
+  from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes scaleIn {
+@keyframes corexScaleIn {
   from { opacity: 0; transform: scale(0.95); }
   to { opacity: 1; transform: scale(1); }
 }
 
-:not(.animate-enabled) * {
-  transition-duration: 0ms !important;
-  animation-duration: 0ms !important;
+@keyframes corexSlideRight {
+  from { opacity: 0; transform: translateX(-12px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* ── Table row hover (smooth highlight) ── */
+.animate-enabled tr {
+  transition-property: background-color;
+  transition-duration: 150ms;
+}
+
+/* ── Dropdown / Popover entrance ── */
+.animate-enabled [data-radix-popper-content-wrapper] {
+  animation: corexScaleIn 0.15s ease-out;
+}
+
+/* ── Dialog / Sheet entrance ── */
+.animate-enabled [data-radix-dialog-content],
+.animate-enabled [data-radix-dialog-overlay] {
+  animation: corexScaleIn 0.2s ease-out;
+}
+
+/* ── Tooltip fade ── */
+.animate-enabled [data-state="delayed-open"] {
+  animation: corexFadeIn 0.15s ease-out;
+}
+
+/* ── Toast slide-in ── */
+.animate-enabled [data-sonner-toast] {
+  animation: corexSlideRight 0.3s ease-out;
+}
+
+/* ── Scrollbar transition ── */
+.animate-enabled ::-webkit-scrollbar-thumb {
+  transition: background-color 200ms;
 }

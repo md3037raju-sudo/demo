@@ -231,6 +231,21 @@ export function ThemePage() {
         </CardHeader>
         <CardContent>
           <div className="rounded-xl border bg-card p-6 space-y-4">
+            {/* Animation Demo - most visible difference */}
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Animation Demo</p>
+              <p className="text-xs text-muted-foreground">
+                {animationsEnabled
+                  ? 'Hover over buttons and cards below — notice the smooth lift and transition effects.'
+                  : 'Animations are off. All interactions are instant with no motion.'}
+              </p>
+              <div className="flex flex-wrap gap-2 pt-1">
+                <Button size="sm">Hover Me</Button>
+                <Button size="sm" variant="outline">Click Me</Button>
+                <Button size="sm" variant="secondary">Try Me</Button>
+              </div>
+            </div>
+
             {/* Buttons preview */}
             <div className="space-y-2">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Buttons</p>
