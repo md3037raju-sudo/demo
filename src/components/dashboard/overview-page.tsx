@@ -79,29 +79,6 @@ interface Subscription {
   devices: number
 }
 
-function StatusBadge({ status }: { status: 'active' | 'expired' | 'renewable' }) {
-  switch (status) {
-    case 'active':
-      return (
-        <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/30">
-          Active
-        </Badge>
-      )
-    case 'expired':
-      return (
-        <Badge className="bg-red-500/20 text-red-400 border-red-500/30 hover:bg-red-500/30">
-          Expired
-        </Badge>
-      )
-    case 'renewable':
-      return (
-        <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 hover:bg-amber-500/30">
-          Renewable
-        </Badge>
-      )
-  }
-}
-
 // Duration tab order
 const DURATION_ORDER: PlanDuration[] = ['3d', '7d', '15d', '30d', '6m', '1y']
 
@@ -125,7 +102,8 @@ export function OverviewPage() {
   const [couponError, setCouponError] = useState('')
   const [couponDiscount, setCouponDiscount] = useState(0)
 
-  const activeSubscriptions = subscriptions.filter((s) => s.status === 'active').length
+  const activeSubsList = subscriptions.filter((s) => s.status === 'active')
+  const activeSubscriptions = activeSubsList.length
   const activeDevicesCount = mockActiveDevices.length
   const balance = user?.balance ?? 0
   const referralCount = user?.totalReferrals ?? 0
@@ -388,46 +366,50 @@ export function OverviewPage() {
           <CardTitle>Active Subscriptions</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Plan</TableHead>
-                <TableHead>Devices</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Start Date</TableHead>
-                <TableHead>Expiry Date</TableHead>
-                <TableHead>Price</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {subscriptions.map((sub) => (
-                <TableRow key={sub.id}>
-                  <TableCell className="font-medium">{sub.name}</TableCell>
-                  <TableCell>{sub.plan}</TableCell>
-                  <TableCell>{sub.devices ?? 1}</TableCell>
-                  <TableCell>
-                    <StatusBadge status={sub.status} />
-                  </TableCell>
-                  <TableCell>{sub.startDate}</TableCell>
-                  <TableCell>{sub.expiryDate}</TableCell>
-                  <TableCell>৳{sub.price.toFixed(2)}</TableCell>
-                  <TableCell>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-1.5"
-                      onClick={() => handleConfigure(sub.id)}
-                    >
-                      <Settings className="size-3.5" />
-                      Configure
-                    </Button>
-                  </TableCell>
+          {activeSubsList.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Plan</TableHead>
+                  <TableHead>Devices</TableHead>
+                  <TableHead>Start Date</TableHead>
+                  <TableHead>Expiry Date</TableHead>
+                  <TableHead>Price</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {activeSubsList.map((sub) => (
+                  <TableRow key={sub.id}>
+                    <TableCell className="font-medium">{sub.name}</TableCell>
+                    <TableCell>{sub.plan}</TableCell>
+                    <TableCell>{sub.devices ?? 1}</TableCell>
+                    <TableCell>{sub.startDate}</TableCell>
+                    <TableCell>{sub.expiryDate}</TableCell>
+                    <TableCell>৳{sub.price.toFixed(2)}</TableCell>
+                    <TableCell>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5"
+                        onClick={() => handleConfigure(sub.id)}
+                      >
+                        <Settings className="size-3.5" />
+                        Configure
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="py-8 text-center">
+              <CreditCard className="mx-auto mb-3 size-10 text-muted-foreground/50" />
+              <p className="text-sm text-muted-foreground">No active subscriptions</p>
+              <p className="text-xs text-muted-foreground mt-1">Purchase a plan to get started!</p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
