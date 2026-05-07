@@ -1,4 +1,13 @@
 import { create } from 'zustand'
+import {
+  fetchTable,
+  fetchConfig,
+  insertRow,
+  updateRow,
+  subscribeToTable,
+  snakeToCamelObj,
+  camelToSnakeObj,
+} from '@/lib/supabase-sync'
 
 export interface ReferralEntry {
   id: string
@@ -21,14 +30,49 @@ export interface ReferralSettings {
   commissionValue: number
 }
 
-interface ReferralState {
-  referrals: ReferralEntry[]
-  settings: ReferralSettings
-  applyReferralCode: (code: string, newUserId: string, newUserName: string) => { success: boolean; error?: string }
-  updateSettings: (settings: Partial<ReferralSettings>) => void
-  getReferralsByUser: (userId: string) => ReferralEntry[]
-  getTotalEarnings: (userId: string) => number
+// ── Converter functions: snake_case DB row ↔ camelCase ──
+
+function referralFromDb(row: Record<string, unknown>): ReferralEntry {
+  const camel = snakeToCamelObj<ReferralEntry>(row)
+  return {
+    id: camel.id ?? '',
+    referrerId: camel.referrerId ?? '',
+    referrerName: camel.referrerName ?? '',
+    referredUserId: camel.referredUserId ?? '',
+    referredUserName: camel.referredUserName ?? '',
+    referralCode: camel.referralCode ?? '',
+    referredAt: camel.referredAt ?? '',
+    referrerReward: typeof camel.referrerReward === 'number' ? camel.referrerReward : 0,
+    referredReward: typeof camel.referredReward === 'number' ? camel.referredReward : 0,
+    status: camel.status === 'pending' ? 'pending' : 'completed',
+  }
 }
+
+function referralToDb(item: Partial<ReferralEntry>): Record<string, unknown> {
+  return camelToSnakeObj(item as Record<string, unknown>)
+}
+
+function referralSettingsFromDb(row: Record<string, unknown>): ReferralSettings {
+  const camel = snakeToCamelObj<ReferralSettings>(row)
+  return {
+    referrerReward: typeof camel.referrerReward === 'number' ? camel.referrerReward : 5,
+    referredReward: typeof camel.referredReward === 'number' ? camel.referredReward : 5,
+    minWithdrawal: typeof camel.minWithdrawal === 'number' ? camel.minWithdrawal : 10,
+    commissionType: camel.commissionType === 'percentage' ? 'percentage' : 'fixed',
+    commissionValue: typeof camel.commissionValue === 'number' ? camel.commissionValue : 5,
+  }
+}
+
+function referralSettingsToDb(item: Partial<ReferralSettings>): Record<string, unknown> {
+  return camelToSnakeObj(item as Record<string, unknown>)
+}
+
+// ── Table name constants ──
+
+const REFERRALS_TABLE = 'referrals'
+const REFERRAL_SETTINGS_TABLE = 'referral_settings'
+
+// ── Initial mock data ──
 
 const mockReferrals: ReferralEntry[] = [
   {
@@ -93,16 +137,112 @@ const mockReferrals: ReferralEntry[] = [
   },
 ]
 
+const initialSettings: ReferralSettings = {
+  referrerReward: 5,
+  referredReward: 5,
+  minWithdrawal: 10,
+  commissionType: 'fixed',
+  commissionValue: 5,
+}
+
+// ── Store interface (unchanged from original) ──
+
+interface ReferralState {
+  referrals: ReferralEntry[]
+  settings: ReferralSettings
+  isSupabaseConnected: boolean
+
+  applyReferralCode: (code: string, newUserId: string, newUserName: string) => { success: boolean; error?: string }
+  updateSettings: (settings: Partial<ReferralSettings>) => void
+  getReferralsByUser: (userId: string) => ReferralEntry[]
+  getTotalEarnings: (userId: string) => number
+
+  // Sync
+  syncWithSupabase: () => Promise<void>
+}
+
+// ── Real-time subscription channel references ──
+
+let referralsChannel: ReturnType<typeof subscribeToTable<ReferralEntry>> | null = null
+let referralSettingsChannel: ReturnType<typeof subscribeToTable<ReferralSettings>> | null = null
+
+// ── Store ──
+
 export const useReferralStore = create<ReferralState>((set, get) => ({
   referrals: [...mockReferrals],
+  settings: { ...initialSettings },
+  isSupabaseConnected: false,
 
-  settings: {
-    referrerReward: 5,
-    referredReward: 5,
-    minWithdrawal: 10,
-    commissionType: 'fixed',
-    commissionValue: 5,
+  // ── Sync with Supabase ──
+
+  syncWithSupabase: async () => {
+    try {
+      const [referralData, settingsData] = await Promise.all([
+        fetchTable<ReferralEntry>(REFERRALS_TABLE, referralFromDb, 'created_at', false),
+        fetchConfig<ReferralSettings>(REFERRAL_SETTINGS_TABLE, referralSettingsFromDb),
+      ])
+
+      const hasReferralData = referralData.length > 0
+      const hasSettingsData = settingsData !== null
+
+      set({
+        ...(hasReferralData ? { referrals: referralData } : {}),
+        ...(hasSettingsData ? { settings: settingsData } : {}),
+        isSupabaseConnected: true,
+      })
+
+      // Subscribe to real-time changes for referrals table
+      if (!referralsChannel) {
+        referralsChannel = subscribeToTable<ReferralEntry>(
+          REFERRALS_TABLE,
+          {
+            onInsert: (item) => {
+              set((state) => {
+                if (state.referrals.some((r) => r.id === item.id)) return state
+                return { referrals: [item, ...state.referrals] }
+              })
+            },
+            onUpdate: (item) => {
+              set((state) => ({
+                referrals: state.referrals.map((r) => (r.id === item.id ? item : r)),
+              }))
+            },
+            onDelete: (id) => {
+              set((state) => ({
+                referrals: state.referrals.filter((r) => r.id !== id),
+              }))
+            },
+          },
+          referralFromDb
+        )
+      }
+
+      // Subscribe to real-time changes for referral_settings table
+      if (!referralSettingsChannel) {
+        referralSettingsChannel = subscribeToTable<ReferralSettings>(
+          REFERRAL_SETTINGS_TABLE,
+          {
+            onInsert: (item) => {
+              set({ settings: item })
+            },
+            onUpdate: (item) => {
+              set({ settings: item })
+            },
+            onDelete: () => {
+              // If settings are deleted, fall back to initial
+              set({ settings: { ...initialSettings } })
+            },
+          },
+          referralSettingsFromDb
+        )
+      }
+    } catch (err) {
+      console.warn('[REFERRAL-STORE] Supabase sync failed, using mock data:', err)
+      set({ isSupabaseConnected: false })
+    }
   },
+
+  // ── Write operations: update local state immediately, push to Supabase in background ──
 
   applyReferralCode: (code, newUserId, newUserName) => {
     const state = get()
@@ -114,7 +254,6 @@ export const useReferralStore = create<ReferralState>((set, get) => ({
     }
 
     // Find the referrer by code
-    // We check against known referral codes from the auth store pattern
     const codeToReferrer: Record<string, { id: string; name: string }> = {
       'COREX-7K9M2': { id: 'usr_cx_001', name: 'Alex Morgan' },
       'SARAH-X4K7M': { id: 'usr_cx_002', name: 'Sarah Chen' },
@@ -148,6 +287,13 @@ export const useReferralStore = create<ReferralState>((set, get) => ({
       referrals: [newReferral, ...state.referrals],
     }))
 
+    // Push to Supabase in background
+    if (get().isSupabaseConnected) {
+      insertRow(REFERRALS_TABLE, newReferral, referralToDb).catch((err) => {
+        console.warn('[REFERRAL-STORE] Failed to push applyReferralCode to Supabase:', err)
+      })
+    }
+
     return { success: true }
   },
 
@@ -155,6 +301,14 @@ export const useReferralStore = create<ReferralState>((set, get) => ({
     set((state) => ({
       settings: { ...state.settings, ...newSettings },
     }))
+
+    // Push to Supabase in background
+    if (get().isSupabaseConnected) {
+      // referral_settings is a single-row table — update by id 'settings_001'
+      updateRow(REFERRAL_SETTINGS_TABLE, 'settings_001', newSettings, referralSettingsToDb).catch((err) => {
+        console.warn('[REFERRAL-STORE] Failed to push updateSettings to Supabase:', err)
+      })
+    }
   },
 
   getReferralsByUser: (userId) => {
@@ -167,3 +321,11 @@ export const useReferralStore = create<ReferralState>((set, get) => ({
       .reduce((sum, r) => sum + r.referrerReward, 0)
   },
 }))
+
+// ── Auto-sync on store creation (setTimeout avoids SSR issues) ──
+
+if (typeof window !== 'undefined') {
+  setTimeout(() => {
+    useReferralStore.getState().syncWithSupabase()
+  }, 0)
+}

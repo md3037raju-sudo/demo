@@ -1,4 +1,13 @@
 import { create } from 'zustand'
+import {
+  fetchTable,
+  insertRow,
+  updateRow,
+  deleteRows,
+  subscribeToTable,
+  snakeToCamelObj,
+  camelToSnakeObj,
+} from '@/lib/supabase-sync'
 
 export type TicketStatus = 'open' | 'in_progress' | 'closed'
 export type TicketPriority = 'low' | 'medium' | 'high'
@@ -25,6 +34,55 @@ export interface TicketData {
   conversation: TicketMessage[]
 }
 
+// ── Converter functions: snake_case DB row ↔ camelCase ──
+
+function ticketFromDb(row: Record<string, unknown>): Omit<TicketData, 'conversation'> {
+  const camel = snakeToCamelObj<Omit<TicketData, 'conversation'>>(row)
+  return {
+    id: camel.id ?? '',
+    userId: camel.userId ?? '',
+    userName: camel.userName ?? '',
+    subject: camel.subject ?? '',
+    description: camel.description ?? '',
+    status: ['open', 'in_progress', 'closed'].includes(camel.status as string)
+      ? (camel.status as TicketStatus)
+      : 'open',
+    priority: ['low', 'medium', 'high'].includes(camel.priority as string)
+      ? (camel.priority as TicketPriority)
+      : 'low',
+    createdAt: camel.createdAt ?? '',
+    lastUpdate: camel.lastUpdate ?? '',
+    messages: typeof camel.messages === 'number' ? camel.messages : (typeof camel.messagesCount === 'number' ? camel.messagesCount : 0),
+  }
+}
+
+function ticketToDb(item: Partial<TicketData>): Record<string, unknown> {
+  // Remove conversation field — it's stored in a separate table
+  const { conversation, ...rest } = item as TicketData
+  return camelToSnakeObj(rest as Record<string, unknown>)
+}
+
+function ticketMessageFromDb(row: Record<string, unknown>): TicketMessage & { ticketId: string } {
+  const camel = snakeToCamelObj<TicketMessage & { ticketId: string }>(row)
+  return {
+    id: camel.id ?? '',
+    ticketId: camel.ticketId ?? '',
+    sender: camel.sender === 'admin' ? 'admin' : 'user',
+    name: camel.name ?? '',
+    content: camel.content ?? '',
+    timestamp: camel.timestamp ?? '',
+  }
+}
+
+function ticketMessageToDb(item: Partial<TicketMessage> & { ticketId: string }): Record<string, unknown> {
+  return camelToSnakeObj(item as Record<string, unknown>)
+}
+
+// ── Table name constants ──
+
+const TICKETS_TABLE = 'tickets'
+const TICKET_MESSAGES_TABLE = 'ticket_messages'
+
 function generateId(prefix: string): string {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`
 }
@@ -37,7 +95,8 @@ function todayDate(): string {
   return new Date().toISOString().split('T')[0]
 }
 
-// Initial mock tickets
+// ── Initial mock tickets ──
+
 const initialTickets: TicketData[] = [
   {
     id: 'tk_101',
@@ -111,8 +170,11 @@ const initialTickets: TicketData[] = [
   },
 ]
 
+// ── Store interface (unchanged from original) ──
+
 interface TicketState {
   tickets: TicketData[]
+  isSupabaseConnected: boolean
 
   // Actions - user side
   createTicket: (userId: string, userName: string, subject: string, description: string, priority: TicketPriority) => TicketData | null
@@ -130,10 +192,141 @@ interface TicketState {
   getUserTickets: (userId: string) => TicketData[]
   getUserOpenTickets: (userId: string) => TicketData[]
   getTicketById: (ticketId: string) => TicketData | undefined
+
+  // Sync
+  syncWithSupabase: () => Promise<void>
 }
+
+// ── Real-time subscription channel references ──
+
+let ticketsChannel: ReturnType<typeof subscribeToTable<TicketData>> | null = null
+let ticketMessagesChannel: ReturnType<typeof subscribeToTable<TicketMessage & { ticketId: string }>> | null = null
+
+// ── Store ──
 
 export const useTicketStore = create<TicketState>((set, get) => ({
   tickets: initialTickets,
+  isSupabaseConnected: false,
+
+  // ── Sync with Supabase ──
+
+  syncWithSupabase: async () => {
+    try {
+      // Fetch both tickets and ticket_messages in parallel
+      const [ticketRows, messageRows] = await Promise.all([
+        fetchTable<Omit<TicketData, 'conversation'>>(TICKETS_TABLE, ticketFromDb, 'created_at_ts', false),
+        fetchTable<TicketMessage & { ticketId: string }>(TICKET_MESSAGES_TABLE, ticketMessageFromDb, 'created_at', true),
+      ])
+
+      if (ticketRows.length > 0) {
+        // Group messages by ticket_id
+        const messagesByTicket: Record<string, TicketMessage[]> = {}
+        for (const msg of messageRows) {
+          const tid = msg.ticketId
+          if (!messagesByTicket[tid]) messagesByTicket[tid] = []
+          const { ticketId: _tid, ...msgWithoutTicketId } = msg
+          messagesByTicket[tid].push(msgWithoutTicketId)
+        }
+
+        // Build full TicketData with conversations
+        const fullTickets: TicketData[] = ticketRows.map((t) => ({
+          ...t,
+          conversation: messagesByTicket[t.id] ?? [],
+        }))
+
+        set({ tickets: fullTickets, isSupabaseConnected: true })
+      } else {
+        set({ isSupabaseConnected: true })
+      }
+
+      // Subscribe to real-time changes for tickets table
+      if (!ticketsChannel) {
+        ticketsChannel = subscribeToTable<TicketData>(
+          TICKETS_TABLE,
+          {
+            onInsert: (item) => {
+              set((state) => {
+                if (state.tickets.some((t) => t.id === item.id)) return state
+                // New ticket from realtime won't have conversation — add with empty
+                return { tickets: [{ ...item, conversation: item.conversation ?? [] }, ...state.tickets] }
+              })
+            },
+            onUpdate: (item) => {
+              set((state) => ({
+                tickets: state.tickets.map((t) =>
+                  t.id === item.id ? { ...t, ...item, conversation: t.conversation } : t
+                ),
+              }))
+            },
+            onDelete: (id) => {
+              set((state) => ({
+                tickets: state.tickets.filter((t) => t.id !== id),
+              }))
+            },
+          },
+          (row) => {
+            const base = ticketFromDb(row)
+            return { ...base, conversation: [] } as TicketData
+          }
+        )
+      }
+
+      // Subscribe to real-time changes for ticket_messages table
+      if (!ticketMessagesChannel) {
+        ticketMessagesChannel = subscribeToTable<TicketMessage & { ticketId: string }>(
+          TICKET_MESSAGES_TABLE,
+          {
+            onInsert: (item) => {
+              const { ticketId: _tid, ...msgWithoutTicketId } = item
+              set((state) => ({
+                tickets: state.tickets.map((t) =>
+                  t.id === item.ticketId
+                    ? {
+                        ...t,
+                        conversation: t.conversation.some((m) => m.id === item.id)
+                          ? t.conversation
+                          : [...t.conversation, msgWithoutTicketId],
+                        messages: t.messages + 1,
+                      }
+                    : t
+                ),
+              }))
+            },
+            onUpdate: (item) => {
+              const { ticketId: _tid, ...msgWithoutTicketId } = item
+              set((state) => ({
+                tickets: state.tickets.map((t) =>
+                  t.id === item.ticketId
+                    ? {
+                        ...t,
+                        conversation: t.conversation.map((m) =>
+                          m.id === item.id ? msgWithoutTicketId : m
+                        ),
+                      }
+                    : t
+                ),
+              }))
+            },
+            onDelete: (id) => {
+              // When a message is deleted, remove it from the corresponding ticket's conversation
+              set((state) => ({
+                tickets: state.tickets.map((t) => ({
+                  ...t,
+                  conversation: t.conversation.filter((m) => m.id !== id),
+                })),
+              }))
+            },
+          },
+          ticketMessageFromDb
+        )
+      }
+    } catch (err) {
+      console.warn('[TICKET-STORE] Supabase sync failed, using mock data:', err)
+      set({ isSupabaseConnected: false })
+    }
+  },
+
+  // ── Write operations: update local state immediately, push to Supabase in background ──
 
   createTicket: (userId, userName, subject, description, priority) => {
     // Check: one open ticket at a time per user
@@ -168,6 +361,20 @@ export const useTicketStore = create<TicketState>((set, get) => ({
     set((state) => ({
       tickets: [ticket, ...state.tickets],
     }))
+
+    // Push to Supabase in background: insert ticket + insert first message
+    if (get().isSupabaseConnected) {
+      const { conversation: _conv, ...ticketWithoutConversation } = ticket
+      insertRow(TICKETS_TABLE, ticketWithoutConversation, ticketToDb).catch((err) => {
+        console.warn('[TICKET-STORE] Failed to push createTicket (ticket) to Supabase:', err)
+      })
+
+      const firstMessage = ticket.conversation[0]
+      insertRow(TICKET_MESSAGES_TABLE, { ...firstMessage, ticketId: ticket.id }, ticketMessageToDb).catch((err) => {
+        console.warn('[TICKET-STORE] Failed to push createTicket (message) to Supabase:', err)
+      })
+    }
+
     return ticket
   },
 
@@ -186,6 +393,17 @@ export const useTicketStore = create<TicketState>((set, get) => ({
           : t
       ),
     }))
+
+    // Push to Supabase: update ticket + insert message
+    if (get().isSupabaseConnected) {
+      updateRow(TICKETS_TABLE, ticketId, { lastUpdate: newMsg.timestamp, messages: get().tickets.find((t) => t.id === ticketId)?.messages }, ticketToDb).catch((err) => {
+        console.warn('[TICKET-STORE] Failed to push userReply (ticket) to Supabase:', err)
+      })
+
+      insertRow(TICKET_MESSAGES_TABLE, { ...newMsg, ticketId }, ticketMessageToDb).catch((err) => {
+        console.warn('[TICKET-STORE] Failed to push userReply (message) to Supabase:', err)
+      })
+    }
   },
 
   adminReply: (ticketId, content) => {
@@ -203,16 +421,34 @@ export const useTicketStore = create<TicketState>((set, get) => ({
           : t
       ),
     }))
+
+    // Push to Supabase: update ticket + insert message
+    if (get().isSupabaseConnected) {
+      updateRow(TICKETS_TABLE, ticketId, { lastUpdate: newMsg.timestamp, messages: get().tickets.find((t) => t.id === ticketId)?.messages }, ticketToDb).catch((err) => {
+        console.warn('[TICKET-STORE] Failed to push adminReply (ticket) to Supabase:', err)
+      })
+
+      insertRow(TICKET_MESSAGES_TABLE, { ...newMsg, ticketId }, ticketMessageToDb).catch((err) => {
+        console.warn('[TICKET-STORE] Failed to push adminReply (message) to Supabase:', err)
+      })
+    }
   },
 
   changeStatus: (ticketId, newStatus) => {
+    const now = nowTimestamp()
     set((state) => ({
       tickets: state.tickets.map((t) =>
         t.id === ticketId
-          ? { ...t, status: newStatus, lastUpdate: nowTimestamp() }
+          ? { ...t, status: newStatus, lastUpdate: now }
           : t
       ),
     }))
+
+    if (get().isSupabaseConnected) {
+      updateRow(TICKETS_TABLE, ticketId, { status: newStatus, lastUpdate: now }, ticketToDb).catch((err) => {
+        console.warn('[TICKET-STORE] Failed to push changeStatus to Supabase:', err)
+      })
+    }
   },
 
   assignTicket: (ticketId) => {
@@ -223,6 +459,15 @@ export const useTicketStore = create<TicketState>((set, get) => ({
     set((state) => ({
       tickets: state.tickets.filter((t) => t.id !== ticketId),
     }))
+
+    if (get().isSupabaseConnected) {
+      // Delete messages for this ticket first, then the ticket itself
+      // Note: If DB has ON DELETE CASCADE, only deleting the ticket is needed.
+      // We'll delete the ticket and let CASCADE handle messages.
+      deleteRows(TICKETS_TABLE, ticketId).catch((err) => {
+        console.warn('[TICKET-STORE] Failed to push deleteTicket to Supabase:', err)
+      })
+    }
   },
 
   deleteTickets: (ticketIds) => {
@@ -230,6 +475,12 @@ export const useTicketStore = create<TicketState>((set, get) => ({
     set((state) => ({
       tickets: state.tickets.filter((t) => !set_.has(t.id)),
     }))
+
+    if (get().isSupabaseConnected) {
+      deleteRows(TICKETS_TABLE, ticketIds).catch((err) => {
+        console.warn('[TICKET-STORE] Failed to push deleteTickets to Supabase:', err)
+      })
+    }
   },
 
   bulkClose: (ticketIds) => {
@@ -240,9 +491,25 @@ export const useTicketStore = create<TicketState>((set, get) => ({
         set_.has(t.id) ? { ...t, status: 'closed' as TicketStatus, lastUpdate: now } : t
       ),
     }))
+
+    if (get().isSupabaseConnected) {
+      ticketIds.forEach((id) => {
+        updateRow(TICKETS_TABLE, id, { status: 'closed' as TicketStatus, lastUpdate: now }, ticketToDb).catch((err) => {
+          console.warn('[TICKET-STORE] Failed to push bulkClose to Supabase:', err)
+        })
+      })
+    }
   },
 
   getUserTickets: (userId) => get().tickets.filter((t) => t.userId === userId),
   getUserOpenTickets: (userId) => get().tickets.filter((t) => t.userId === userId && (t.status === 'open' || t.status === 'in_progress')),
   getTicketById: (ticketId) => get().tickets.find((t) => t.id === ticketId),
 }))
+
+// ── Auto-sync on store creation (setTimeout avoids SSR issues) ──
+
+if (typeof window !== 'undefined') {
+  setTimeout(() => {
+    useTicketStore.getState().syncWithSupabase()
+  }, 0)
+}
