@@ -82,6 +82,9 @@ export function AdminDbInitPage() {
     hasUrl: boolean
     hasAnonKey: boolean
     hasServiceKey: boolean
+    anonKeyFormat: string
+    serviceKeyFormat: string
+    isModernKeys: boolean
     issues: string[]
     urlMasked: string
     anonKeyHint: string
@@ -451,26 +454,25 @@ export function AdminDbInitPage() {
                 Supabase Credentials Not Configured
               </div>
               <p className="text-xs text-red-400/80">
-                The keys in your <code className="bg-muted px-1 rounded">.env.local</code> are not valid Supabase client keys.
-                You need JWT-format keys from your Supabase Dashboard.
+                Some keys in your <code className="bg-muted px-1 rounded">.env.local</code> are missing or invalid.
               </p>
               <div className="space-y-1.5 mt-2">
                 <div className="flex items-center gap-2 text-xs">
                   <span className={`size-2 rounded-full ${supabaseConfig.hasUrl ? 'bg-emerald-400' : 'bg-red-400'}`} />
                   <span className={supabaseConfig.hasUrl ? 'text-emerald-400' : 'text-red-400'}>
-                    Project URL: {supabaseConfig.hasUrl ? '✓ Valid' : '✗ Missing or invalid (must be https://<project>.supabase.co)'}
+                    Project URL: {supabaseConfig.hasUrl ? '✓ Valid' : '✗ Missing or invalid'}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-xs">
                   <span className={`size-2 rounded-full ${supabaseConfig.hasAnonKey ? 'bg-emerald-400' : 'bg-red-400'}`} />
                   <span className={supabaseConfig.hasAnonKey ? 'text-emerald-400' : 'text-red-400'}>
-                    Anon Key: {supabaseConfig.hasAnonKey ? '✓ Valid JWT' : `✗ Invalid (current: ${supabaseConfig.anonKeyHint}... — must be a JWT starting with eyJ)`}
+                    Publishable Key: {supabaseConfig.hasAnonKey ? '✓ Valid' : `✗ Missing or invalid`}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-xs">
                   <span className={`size-2 rounded-full ${supabaseConfig.hasServiceKey ? 'bg-emerald-400' : 'bg-red-400'}`} />
                   <span className={supabaseConfig.hasServiceKey ? 'text-emerald-400' : 'text-red-400'}>
-                    Service Role Key: {supabaseConfig.hasServiceKey ? '✓ Valid JWT' : '✗ Invalid (must be a JWT starting with eyJ)'}
+                    Secret Key: {supabaseConfig.hasServiceKey ? '✓ Valid' : '✗ Missing or invalid'}
                   </span>
                 </div>
               </div>
@@ -479,13 +481,18 @@ export function AdminDbInitPage() {
                 <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
                   <li>Go to <strong>supabase.com</strong> → Your Project → <strong>Settings</strong> → <strong>API</strong></li>
                   <li>Copy <strong>Project URL</strong> → paste as <code className="bg-muted px-1 rounded">NEXT_PUBLIC_SUPABASE_URL</code></li>
-                  <li>Copy <strong>anon/public</strong> key → paste as <code className="bg-muted px-1 rounded">NEXT_PUBLIC_SUPABASE_ANON_KEY</code></li>
-                  <li>Copy <strong>service_role</strong> key → paste as <code className="bg-muted px-1 rounded">SUPABASE_SERVICE_ROLE_KEY</code></li>
+                  <li>Copy <strong>Publishable Key</strong> (sb_publishable_...) → paste as <code className="bg-muted px-1 rounded">NEXT_PUBLIC_SUPABASE_ANON_KEY</code></li>
+                  <li>Copy <strong>Secret Key</strong> (sb_secret_...) → paste as <code className="bg-muted px-1 rounded">SUPABASE_SERVICE_ROLE_KEY</code></li>
                 </ol>
-                <p className="text-amber-500 font-medium mt-1">
-                  ⚠ The keys you provided (sb_publishable_... / sb_secret_...) are Management API keys, NOT database client keys.
-                </p>
               </div>
+            </div>
+          )}
+
+          {/* Modern Keys Detected Banner */}
+          {supabaseConfig && supabaseConfig.configured && supabaseConfig.isModernKeys && (
+            <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 flex items-center gap-2 text-sm text-emerald-400">
+              <CheckCircle2 className="size-4 shrink-0" />
+              <span>Supabase connected with modern keys (<code className="bg-muted/50 px-1 rounded text-xs">sb_publishable/sb_secret</code>)</span>
             </div>
           )}
 
@@ -499,7 +506,7 @@ export function AdminDbInitPage() {
             </div>
             <div className="rounded-lg border p-3 space-y-1">
               <div className="flex items-center gap-1">
-                <p className="text-xs text-muted-foreground">Anon Key</p>
+                <p className="text-xs text-muted-foreground">{supabaseConfig?.isModernKeys ? 'Publishable Key' : 'Anon Key'}</p>
                 {supabaseConfig && (
                   <span className={`size-1.5 rounded-full ${supabaseConfig.hasAnonKey ? 'bg-emerald-400' : 'bg-red-400'}`} />
                 )}
@@ -510,7 +517,7 @@ export function AdminDbInitPage() {
             </div>
             <div className="rounded-lg border p-3 space-y-1">
               <div className="flex items-center gap-1">
-                <p className="text-xs text-muted-foreground">Service Role</p>
+                <p className="text-xs text-muted-foreground">{supabaseConfig?.isModernKeys ? 'Secret Key' : 'Service Role'}</p>
                 {supabaseConfig && (
                   <span className={`size-1.5 rounded-full ${supabaseConfig.hasServiceKey ? 'bg-emerald-400' : 'bg-red-400'}`} />
                 )}

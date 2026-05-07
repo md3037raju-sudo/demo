@@ -13,13 +13,16 @@ export async function GET() {
     hasUrl: config.hasUrl,
     hasAnonKey: config.hasAnonKey,
     hasServiceKey: config.hasServiceKey,
+    anonKeyFormat: config.anonKeyFormat,
+    serviceKeyFormat: config.serviceKeyFormat,
+    isModernKeys: config.isModernKeys,
     // Show masked URL
     urlMasked: config.url
       ? `${config.url.slice(0, 30)}...`
       : 'Not set',
-    // Show key format hint
+    // Show key format hint (mask the actual key)
     anonKeyHint: config.anonKey
-      ? `${config.anonKey.slice(0, 8)}...`
+      ? `${config.anonKey.slice(0, 16)}...`
       : 'Not set',
     issues: config.issues,
   })
