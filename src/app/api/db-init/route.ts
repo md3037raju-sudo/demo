@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { COREX_SCHEMA_SQL, COREX_DROP_SQL, COREX_TABLES } from '@/lib/supabase-schema'
-import { supabaseServer } from '@/lib/supabase-client'
+import { getSupabaseServer as supabaseServer } from '@/lib/supabase-client'
 
 /**
  * POST /api/db-init
@@ -66,7 +66,7 @@ async function handleStatus() {
 
   for (const table of COREX_TABLES) {
     try {
-      const { error } = await supabaseServer
+      const { error } = await supabaseServer()
         .from(table)
         .select('id')
         .limit(1)
@@ -173,7 +173,7 @@ async function handleSeed() {
 
   // Seed users
   for (const u of mockUsers) {
-    const { error } = await supabaseServer.from('users').upsert({
+    const { error } = await supabaseServer().from('users').upsert({
       id: u.id,
       name: u.name,
       email: u.email,
@@ -193,7 +193,7 @@ async function handleSeed() {
 
   // Seed plans
   for (const p of mockPlans) {
-    const { error } = await supabaseServer.from('plans').upsert({
+    const { error } = await supabaseServer().from('plans').upsert({
       id: p.id,
       name: p.name,
       description: p.description,
@@ -216,7 +216,7 @@ async function handleSeed() {
 
   // Seed subscriptions
   for (const s of mockSubscriptions) {
-    const { error } = await supabaseServer.from('subscriptions').upsert({
+    const { error } = await supabaseServer().from('subscriptions').upsert({
       id: s.id,
       user_id: s.userId,
       user_name: s.userName,
@@ -236,7 +236,7 @@ async function handleSeed() {
 
   // Seed proxies
   for (const p of mockProxies) {
-    const { error } = await supabaseServer.from('proxies').upsert({
+    const { error } = await supabaseServer().from('proxies').upsert({
       id: p.id,
       protocol: p.protocol,
       address: p.address,
@@ -278,7 +278,7 @@ async function handleSeed() {
 
   // Seed proxy presets
   for (const p of mockProxyPresets) {
-    const { error } = await supabaseServer.from('proxy_presets').upsert({
+    const { error } = await supabaseServer().from('proxy_presets').upsert({
       id: p.id,
       name: p.name,
       description: p.description,
@@ -289,7 +289,7 @@ async function handleSeed() {
 
     // Seed subgroups
     for (const sg of p.subgroups) {
-      const { error: sgError } = await supabaseServer.from('proxy_preset_subgroups').upsert({
+      const { error: sgError } = await supabaseServer().from('proxy_preset_subgroups').upsert({
         id: sg.id,
         preset_id: p.id,
         name: sg.name,
@@ -306,7 +306,7 @@ async function handleSeed() {
 
   // Seed coupons
   for (const c of mockCoupons) {
-    const { error } = await supabaseServer.from('coupons').upsert({
+    const { error } = await supabaseServer().from('coupons').upsert({
       id: c.id,
       code: c.code,
       description: c.description,

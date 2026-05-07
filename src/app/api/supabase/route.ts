@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseServer } from '@/lib/supabase-client'
+import { getSupabaseServer as supabaseServer } from '@/lib/supabase-client'
 
 /**
  * GET /api/supabase?table=<table>&id=<id>&userId=<userId>&status=<status>
@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Table name is required' }, { status: 400 })
     }
 
-    let query = supabaseServer.from(table).select('*')
+    let query = supabaseServer().from(table).select('*')
 
     // Apply filters
     const id = searchParams.get('id')
@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
       ? data.map(camelToSnake)
       : camelToSnake(data)
 
-    const { data: result, error } = await supabaseServer
+    const { data: result, error } = await supabaseServer()
       .from(table)
       .insert(snakeData)
       .select()
@@ -120,7 +120,7 @@ export async function PUT(req: NextRequest) {
     // Add updated_at timestamp
     snakeData.updated_at = new Date().toISOString()
 
-    const { data: result, error } = await supabaseServer
+    const { data: result, error } = await supabaseServer()
       .from(table)
       .update(snakeData)
       .eq('id', id)
@@ -153,7 +153,7 @@ export async function DELETE(req: NextRequest) {
     }
 
     if (Array.isArray(id)) {
-      const { error } = await supabaseServer
+      const { error } = await supabaseServer()
         .from(table)
         .delete()
         .in('id', id)
@@ -162,7 +162,7 @@ export async function DELETE(req: NextRequest) {
         return NextResponse.json({ error: error.message }, { status: 500 })
       }
     } else {
-      const { error } = await supabaseServer
+      const { error } = await supabaseServer()
         .from(table)
         .delete()
         .eq('id', id)

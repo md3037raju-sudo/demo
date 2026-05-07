@@ -6,7 +6,7 @@ import {
   snakeToCamelObj,
   camelToSnakeObj,
 } from '@/lib/supabase-sync'
-import { supabaseBrowser } from '@/lib/supabase-client'
+import { getSupabaseBrowser as supabaseBrowser } from '@/lib/supabase-client'
 
 // ── Types (unchanged) ──
 
@@ -101,7 +101,7 @@ function mockCheckAdmin(provider: 'google' | 'telegram'): UserRole {
 
 async function fetchUserByEmail(email: string): Promise<User | null> {
   try {
-    const { data, error } = await supabaseBrowser
+    const { data, error } = await supabaseBrowser()
       .from(TABLE)
       .select('*')
       .eq('email', email)
@@ -120,7 +120,7 @@ async function fetchUserByEmail(email: string): Promise<User | null> {
 
 async function fetchUserById(id: string): Promise<User | null> {
   try {
-    const { data, error } = await supabaseBrowser
+    const { data, error } = await supabaseBrowser()
       .from(TABLE)
       .select('*')
       .eq('id', id)

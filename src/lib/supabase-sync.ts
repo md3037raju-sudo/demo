@@ -14,7 +14,7 @@
  * - Real-time: Supabase changes → update store → UI re-renders
  */
 
-import { supabaseBrowser } from './supabase-client'
+import { getSupabaseBrowser as supabaseBrowser } from './supabase-client'
 
 // ── Types ──
 
@@ -76,7 +76,7 @@ export async function fetchTable<T>(
   ascending: boolean = false
 ): Promise<T[]> {
   try {
-    const { data, error } = await supabaseBrowser
+    const { data, error } = await supabaseBrowser()
       .from(table)
       .select('*')
       .order(orderBy, { ascending })
@@ -103,7 +103,7 @@ export async function fetchOne<T>(
   fromDb?: (row: Record<string, unknown>) => T
 ): Promise<T | null> {
   try {
-    const { data, error } = await supabaseBrowser
+    const { data, error } = await supabaseBrowser()
       .from(table)
       .select('*')
       .eq('id', id)
@@ -124,7 +124,7 @@ export async function fetchConfig<T>(
   fromDb?: (row: Record<string, unknown>) => T
 ): Promise<T | null> {
   try {
-    const { data, error } = await supabaseBrowser
+    const { data, error } = await supabaseBrowser()
       .from(table)
       .select('*')
       .limit(1)
@@ -231,7 +231,7 @@ export function subscribeToTable<T>(
   },
   fromDb?: (row: Record<string, unknown>) => T
 ) {
-  const channel = supabaseBrowser
+  const channel = supabaseBrowser()
     .channel(`${table}-changes`)
     .on(
       'postgres_changes',
@@ -261,8 +261,8 @@ export function subscribeToTable<T>(
 
 // ── Unsubscribe ──
 
-export async function unsubscribeChannel(channel: ReturnType<typeof supabaseBrowser.channel>) {
-  await supabaseBrowser.removeChannel(channel)
+export async function unsubscribeChannel(channel: any) {
+  await supabaseBrowser().removeChannel(channel)
 }
 
 // ── Check Supabase connection ──
