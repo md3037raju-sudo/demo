@@ -14,16 +14,16 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CoreX — Secure Business Platform",
-  description: "CoreX is a secure business platform with top-level security architecture. Manage subscriptions, devices, and payments with confidence.",
-  keywords: ["CoreX", "Security", "Business", "Platform", "Subscriptions"],
+  title: "CoreX — Fast & Secure Proxy Platform",
+  description: "CoreX provides fast and secure proxy subscriptions. Connect with VLESS, VMess, Trojan, Shadowsocks and more through our Clash-powered app.",
+  keywords: ["CoreX", "Proxy", "VPN", "Clash", "VLESS", "VMess", "Trojan", "Shadowsocks"],
   authors: [{ name: "CoreX Team" }],
   icons: {
     icon: "/favicon.ico",
   },
   openGraph: {
-    title: "CoreX — Secure Business Platform",
-    description: "Enterprise-grade security for your business operations",
+    title: "CoreX — Fast & Secure Proxy Platform",
+    description: "Fast and secure proxy subscriptions powered by Clash",
     type: "website",
   },
 };

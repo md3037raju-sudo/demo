@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useCallback } from 'react'
-import { mockProxyPresets } from '@/lib/mock-data'
+import { useState, useCallback, useMemo } from 'react'
+import { mockProxyPresets, mockProxies, type ProxyEntry, type ProxyProtocol } from '@/lib/mock-data'
 import { toast } from 'sonner'
 import {
   Card,
@@ -18,6 +18,13 @@ import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   Dialog,
   DialogContent,
@@ -59,17 +66,10 @@ import {
   Users,
   Globe,
   ShieldCheck,
+  Copy,
 } from 'lucide-react'
 
-// Types
-interface Proxy {
-  id: string
-  address: string
-  port: number
-  protocol: string
-  status: 'online' | 'offline' | 'unknown'
-  latency: number | null
-}
+// ─── Types ───────────────────────────────────────────────────────────
 
 interface Subgroup {
   id: string
@@ -79,7 +79,7 @@ interface Subgroup {
   image: string | null
   imageWidth: number
   imageHeight: number
-  proxies: Proxy[]
+  proxies: ProxyEntry[]
 }
 
 interface Preset {
@@ -91,21 +91,77 @@ interface Preset {
   assignedUsers: number
 }
 
-// Helper to generate mock proxies for a subgroup
-function generateMockProxies(count: number, subgroupName: string): Proxy[] {
-  const protocols = ['ss', 'vmess', 'vless', 'trojan', 'ssr']
-  const statuses: Proxy['status'][] = ['online', 'online', 'online', 'offline', 'unknown']
-  return Array.from({ length: count }, (_, i) => ({
-    id: `proxy_${subgroupName}_${i}`,
-    address: `${10 + Math.floor(Math.random() * 200)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`,
-    port: [8080, 443, 8443, 1080, 2053][Math.floor(Math.random() * 5)],
-    protocol: protocols[Math.floor(Math.random() * protocols.length)],
-    status: statuses[Math.floor(Math.random() * statuses.length)],
-    latency: Math.floor(Math.random() * 200) + 10,
-  }))
+// ─── Constants ───────────────────────────────────────────────────────
+
+const PROTOCOLS: { value: ProxyProtocol; label: string }[] = [
+  { value: 'vless', label: 'VLESS' },
+  { value: 'vmess', label: 'VMess' },
+  { value: 'trojan', label: 'Trojan' },
+  { value: 'ss', label: 'Shadowsocks' },
+  { value: 'ssr', label: 'ShadowsocksR' },
+  { value: 'wireguard', label: 'WireGuard' },
+  { value: 'socks5', label: 'Socks5' },
+  { value: 'http', label: 'HTTP' },
+]
+
+const PROTOCOL_COLORS: Record<ProxyProtocol, string> = {
+  vless: 'bg-purple-500/15 text-purple-600 border-purple-500/30',
+  vmess: 'bg-blue-500/15 text-blue-600 border-blue-500/30',
+  trojan: 'bg-red-500/15 text-red-600 border-red-500/30',
+  ss: 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30',
+  ssr: 'bg-amber-500/15 text-amber-600 border-amber-500/30',
+  wireguard: 'bg-teal-500/15 text-teal-600 border-teal-500/30',
+  socks5: 'bg-gray-500/15 text-gray-600 border-gray-500/30',
+  http: 'bg-orange-500/15 text-orange-600 border-orange-500/30',
 }
 
-// Convert mock data to internal state format
+const NETWORK_OPTIONS = ['tcp', 'ws', 'grpc', 'h2']
+const FLOW_OPTIONS = ['', 'xtls-rprx-vision', 'xtls-rprx-vision-udp443']
+const VMESS_CIPHER_OPTIONS = ['auto', 'aes-128-gcm', 'chacha20-poly1305', 'none']
+const SS_CIPHER_OPTIONS = [
+  'aes-128-gcm', 'aes-192-gcm', 'aes-256-gcm',
+  'chacha20-ietf-poly1305', 'xchacha20-ietf-poly1305',
+  '2022-blake3-aes-128-gcm', '2022-blake3-aes-256-gcm',
+]
+const SSR_CIPHER_OPTIONS = ['aes-128-cfb', 'aes-192-cfb', 'aes-256-cfb', 'chacha20-ietf', 'rc4-md5']
+const SSR_PROTOCOL_OPTIONS = ['origin', 'auth_sha1_v4', 'auth_aes128_md5', 'auth_aes128_sha1']
+const SSR_OBFS_OPTIONS = ['plain', 'http_simple', 'tls1.2_ticket_auth']
+const CLIENT_FINGERPRINT_OPTIONS = ['chrome', 'firefox', 'safari', 'ios', 'android', 'edge']
+const SS_PLUGIN_OPTIONS = ['', 'obfs', 'v2ray-plugin']
+
+// ─── Default proxy form per protocol ─────────────────────────────────
+
+function getDefaultProxyForm(protocol: ProxyProtocol): Partial<ProxyEntry> {
+  const base = {
+    protocol,
+    address: '',
+    port: 443,
+    status: 'unknown' as const,
+    latency: null,
+  }
+
+  switch (protocol) {
+    case 'vless':
+      return { ...base, uuid: '', network: 'tcp', tls: false, flow: '', clientFingerprint: '' }
+    case 'vmess':
+      return { ...base, uuid: '', network: 'tcp', tls: false, cipher: 'auto', alterId: 0, skipCertVerify: false }
+    case 'trojan':
+      return { ...base, password: '', network: 'tcp', tls: true, skipCertVerify: false }
+    case 'ss':
+      return { ...base, password: '', cipher: 'aes-256-gcm', udp: false, plugin: '' }
+    case 'ssr':
+      return { ...base, password: '', cipher: 'aes-256-cfb', ssrProtocol: 'origin', obfs: 'plain', obfsParam: '' }
+    case 'wireguard':
+      return { ...base, port: 51820, privateKey: '', publicKey: '', presharedKey: '', dns: '', mtu: 1280 }
+    case 'socks5':
+      return { ...base, port: 1080, username: '', password: '', tls: false, skipCertVerify: false }
+    case 'http':
+      return { ...base, port: 8080, username: '', password: '', tls: false, skipCertVerify: false }
+  }
+}
+
+// ─── Init presets from mock data ─────────────────────────────────────
+
 function initPresets(): Preset[] {
   return mockProxyPresets.map((p) => ({
     id: p.id,
@@ -113,20 +169,27 @@ function initPresets(): Preset[] {
     description: p.description,
     isActive: p.isActive,
     assignedUsers: p.assignedUsers,
-    subgroups: p.subgroups.map((sg) => ({
-      id: sg.id,
-      name: sg.name,
-      proxyCount: sg.proxyCount,
-      status: sg.status,
-      image: sg.image,
-      imageWidth: sg.imageWidth,
-      imageHeight: sg.imageHeight,
-      proxies: generateMockProxies(sg.proxyCount, sg.name),
-    })),
+    subgroups: p.subgroups.map((sg) => {
+      const sgProxyIds = (sg as { proxyIds?: string[] }).proxyIds ?? []
+      const proxies = sgProxyIds
+        .map((pid) => mockProxies.find((mp) => mp.id === pid))
+        .filter((p): p is ProxyEntry => !!p)
+      return {
+        id: sg.id,
+        name: sg.name,
+        proxyCount: sg.proxyCount,
+        status: sg.status,
+        image: sg.image,
+        imageWidth: sg.imageWidth,
+        imageHeight: sg.imageHeight,
+        proxies,
+      }
+    }),
   }))
 }
 
-// Status dot component
+// ─── Status Dot ──────────────────────────────────────────────────────
+
 function StatusDot({ status }: { status: string }) {
   const colors: Record<string, string> = {
     healthy: 'bg-emerald-500',
@@ -135,6 +198,7 @@ function StatusDot({ status }: { status: string }) {
     online: 'bg-emerald-500',
     offline: 'bg-red-500',
     unknown: 'bg-gray-500',
+    degraded_status: 'bg-amber-500',
     active: 'bg-emerald-500',
     inactive: 'bg-gray-500',
   }
@@ -145,41 +209,57 @@ function StatusDot({ status }: { status: string }) {
   )
 }
 
+// ─── Protocol Badge ──────────────────────────────────────────────────
+
+function ProtocolBadge({ protocol }: { protocol: ProxyProtocol }) {
+  const label = PROTOCOLS.find((p) => p.value === protocol)?.label ?? protocol.toUpperCase()
+  return (
+    <Badge variant="outline" className={`text-xs font-semibold ${PROTOCOL_COLORS[protocol] ?? ''}`}>
+      {label}
+    </Badge>
+  )
+}
+
+// ─── Main Component ──────────────────────────────────────────────────
+
 export function AdminProxiesPreset() {
   const [presets, setPresets] = useState<Preset[]>(initPresets)
   const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null)
   const [expandedSubgroups, setExpandedSubgroups] = useState<Set<string>>(new Set())
 
-  // Dialog states
+  // Preset dialog
   const [presetDialogOpen, setPresetDialogOpen] = useState(false)
   const [editingPreset, setEditingPreset] = useState<Preset | null>(null)
   const [presetForm, setPresetForm] = useState({ name: '', description: '', isActive: true })
 
+  // Subgroup dialog
   const [subgroupDialogOpen, setSubgroupDialogOpen] = useState(false)
-  const [subgroupForm, setSubgroupForm] = useState({
-    name: '',
-    imageWidth: 200,
-    imageHeight: 100,
-  })
+  const [subgroupForm, setSubgroupForm] = useState({ name: '', imageWidth: 200, imageHeight: 100 })
 
+  // Proxy dialog
+  const [proxyDialogOpen, setProxyDialogOpen] = useState(false)
+  const [editingProxy, setEditingProxy] = useState<ProxyEntry | null>(null)
+  const [proxyTargetSgId, setProxyTargetSgId] = useState<string | null>(null)
+  const [proxyForm, setProxyForm] = useState<Partial<ProxyEntry>>(getDefaultProxyForm('vless'))
+
+  // Bulk upload dialog
   const [bulkUploadOpen, setBulkUploadOpen] = useState(false)
   const [bulkUploadTarget, setBulkUploadTarget] = useState<string | null>(null)
   const [bulkUploadData, setBulkUploadData] = useState('')
   const [bulkUploadTab, setBulkUploadTab] = useState('csv')
 
+  // Delete dialogs
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deletingPresetId, setDeletingPresetId] = useState<string | null>(null)
 
+  // Health check
   const [healthCheckRunning, setHealthCheckRunning] = useState(false)
-  const [healthSummary, setHealthSummary] = useState<{
-    healthy: number
-    degraded: number
-    down: number
-  } | null>(null)
+  const [healthSummary, setHealthSummary] = useState<{ healthy: number; degraded: number; down: number } | null>(null)
 
   const selectedPreset = presets.find((p) => p.id === selectedPresetId)
 
-  // Toggle subgroup expansion
+  // ─── Callbacks ──────────────────────────────────────────────────
+
   const toggleSubgroup = useCallback((sgId: string) => {
     setExpandedSubgroups((prev) => {
       const next = new Set(prev)
@@ -198,11 +278,7 @@ export function AdminProxiesPreset() {
 
   const openEditPreset = (preset: Preset) => {
     setEditingPreset(preset)
-    setPresetForm({
-      name: preset.name,
-      description: preset.description,
-      isActive: preset.isActive,
-    })
+    setPresetForm({ name: preset.name, description: preset.description, isActive: preset.isActive })
     setPresetDialogOpen(true)
   }
 
@@ -291,7 +367,143 @@ export function AdminProxiesPreset() {
     toast.success('Subgroup deleted')
   }
 
-  // Bulk upload
+  // ─── Proxy Add/Edit ────────────────────────────────────────────
+
+  const openAddProxy = (sgId: string) => {
+    setEditingProxy(null)
+    setProxyTargetSgId(sgId)
+    setProxyForm(getDefaultProxyForm('vless'))
+    setProxyDialogOpen(true)
+  }
+
+  const openEditProxy = (sgId: string, proxy: ProxyEntry) => {
+    setEditingProxy(proxy)
+    setProxyTargetSgId(sgId)
+    setProxyForm({ ...proxy })
+    setProxyDialogOpen(true)
+  }
+
+  const handleProtocolChange = (protocol: ProxyProtocol) => {
+    setProxyForm((prev) => {
+      const defaults = getDefaultProxyForm(protocol)
+      return {
+        ...defaults,
+        // preserve common fields if already filled
+        address: prev.address || defaults.address || '',
+        port: prev.port || defaults.port || 443,
+      }
+    })
+  }
+
+  const saveProxy = () => {
+    if (!selectedPresetId || !proxyTargetSgId) return
+    if (!proxyForm.address?.trim()) {
+      toast.error('Address is required')
+      return
+    }
+    if (!proxyForm.port) {
+      toast.error('Port is required')
+      return
+    }
+
+    if (editingProxy) {
+      // Edit existing
+      const updated = { ...editingProxy, ...proxyForm } as ProxyEntry
+      setPresets((prev) =>
+        prev.map((p) =>
+          p.id === selectedPresetId
+            ? {
+                ...p,
+                subgroups: p.subgroups.map((sg) =>
+                  sg.id === proxyTargetSgId
+                    ? { ...sg, proxies: sg.proxies.map((px) => (px.id === editingProxy.id ? updated : px)) }
+                    : sg
+                ),
+              }
+            : p
+        )
+      )
+      toast.success('Proxy updated')
+    } else {
+      // Add new
+      const newProxy: ProxyEntry = {
+        id: `px_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        protocol: proxyForm.protocol ?? 'vless',
+        address: proxyForm.address ?? '',
+        port: proxyForm.port ?? 443,
+        uuid: proxyForm.uuid,
+        password: proxyForm.password,
+        username: proxyForm.username,
+        flow: proxyForm.flow,
+        network: proxyForm.network,
+        tls: proxyForm.tls,
+        sni: proxyForm.sni,
+        alpn: proxyForm.alpn,
+        cipher: proxyForm.cipher,
+        alterId: proxyForm.alterId,
+        skipCertVerify: proxyForm.skipCertVerify,
+        realityPublicKey: proxyForm.realityPublicKey,
+        realityShortId: proxyForm.realityShortId,
+        clientFingerprint: proxyForm.clientFingerprint,
+        grpcService: proxyForm.grpcService,
+        wsPath: proxyForm.wsPath,
+        wsHost: proxyForm.wsHost,
+        udp: proxyForm.udp,
+        plugin: proxyForm.plugin,
+        pluginOptsMode: proxyForm.pluginOptsMode,
+        pluginOptsHost: proxyForm.pluginOptsHost,
+        ssrProtocol: proxyForm.ssrProtocol,
+        obfs: proxyForm.obfs,
+        obfsParam: proxyForm.obfsParam,
+        privateKey: proxyForm.privateKey,
+        publicKey: proxyForm.publicKey,
+        presharedKey: proxyForm.presharedKey,
+        dns: proxyForm.dns,
+        mtu: proxyForm.mtu,
+        status: proxyForm.status ?? 'unknown',
+        latency: proxyForm.latency ?? null,
+      }
+      setPresets((prev) =>
+        prev.map((p) =>
+          p.id === selectedPresetId
+            ? {
+                ...p,
+                subgroups: p.subgroups.map((sg) =>
+                  sg.id === proxyTargetSgId
+                    ? { ...sg, proxies: [...sg.proxies, newProxy], proxyCount: sg.proxies.length + 1 }
+                    : sg
+                ),
+              }
+            : p
+        )
+      )
+      toast.success('Proxy added')
+    }
+    setProxyDialogOpen(false)
+  }
+
+  // Delete proxy
+  const deleteProxy = (sgId: string, proxyId: string) => {
+    if (!selectedPresetId) return
+    setPresets((prev) =>
+      prev.map((p) =>
+        p.id === selectedPresetId
+          ? {
+              ...p,
+              subgroups: p.subgroups.map((sg) =>
+                sg.id === sgId
+                  ? { ...sg, proxies: sg.proxies.filter((px) => px.id !== proxyId), proxyCount: sg.proxies.length - 1 }
+                  : sg
+              ),
+            }
+          : p
+      )
+    )
+    toast.success('Proxy removed')
+  }
+
+  // ─── Bulk Upload ───────────────────────────────────────────────
+
   const openBulkUpload = (sgId: string) => {
     setBulkUploadTarget(sgId)
     setBulkUploadData('')
@@ -305,22 +517,25 @@ export function AdminProxiesPreset() {
       return
     }
 
-    let newProxies: Proxy[] = []
+    let newProxies: ProxyEntry[] = []
 
     try {
       if (bulkUploadTab === 'csv') {
         const lines = bulkUploadData.trim().split('\n')
-        // Skip header if present
-        const dataLines = lines[0]?.toLowerCase().includes('address') ? lines.slice(1) : lines
+        const dataLines = lines[0]?.toLowerCase().includes('protocol') ? lines.slice(1) : lines
         newProxies = dataLines
           .filter((l) => l.trim())
           .map((line, i) => {
             const parts = line.split(',').map((s) => s.trim())
+            const protocol = (parts[0] || 'ss') as ProxyProtocol
             return {
-              id: `proxy_upload_${Date.now()}_${i}`,
-              address: parts[0] || '0.0.0.0',
-              port: parseInt(parts[1]) || 8080,
-              protocol: parts[2] || 'ss',
+              id: `px_upload_${Date.now()}_${i}`,
+              protocol,
+              address: parts[1] || '0.0.0.0',
+              port: parseInt(parts[2]) || 443,
+              uuid: ['vless', 'vmess'].includes(protocol) ? (parts[3] || '') : undefined,
+              password: ['trojan', 'ss', 'ssr'].includes(protocol) ? (parts[3] || '') : undefined,
+              username: ['socks5', 'http'].includes(protocol) ? (parts[3] || '') : undefined,
               status: 'unknown' as const,
               latency: null,
             }
@@ -329,10 +544,21 @@ export function AdminProxiesPreset() {
         const parsed = JSON.parse(bulkUploadData)
         const arr = Array.isArray(parsed) ? parsed : [parsed]
         newProxies = arr.map((item: Record<string, unknown>, i: number) => ({
-          id: `proxy_upload_${Date.now()}_${i}`,
+          id: `px_upload_${Date.now()}_${i}`,
+          protocol: (item.protocol as ProxyProtocol) || 'ss',
           address: (item.address as string) || '0.0.0.0',
-          port: (item.port as number) || 8080,
-          protocol: (item.protocol as string) || 'ss',
+          port: (item.port as number) || 443,
+          uuid: (item.uuid as string) || undefined,
+          password: (item.password as string) || undefined,
+          username: (item.username as string) || undefined,
+          network: (item.network as string) || undefined,
+          tls: (item.tls as boolean) || undefined,
+          sni: (item.sni as string) || undefined,
+          cipher: (item.cipher as string) || undefined,
+          flow: (item.flow as string) || undefined,
+          wsPath: (item.wsPath as string) || (item['ws-opts'] as Record<string, string>)?.path || undefined,
+          wsHost: (item.wsHost as string) || (item['ws-opts'] as Record<string, string>)?.host || undefined,
+          grpcService: (item.grpcService as string) || (item['grpc-opts'] as Record<string, string>)?.serviceName || undefined,
           status: 'unknown' as const,
           latency: null,
         }))
@@ -365,30 +591,11 @@ export function AdminProxiesPreset() {
     toast.success(`${newProxies.length} proxies added`)
   }
 
-  // Delete proxy
-  const deleteProxy = (sgId: string, proxyId: string) => {
-    if (!selectedPresetId) return
-    setPresets((prev) =>
-      prev.map((p) =>
-        p.id === selectedPresetId
-          ? {
-              ...p,
-              subgroups: p.subgroups.map((sg) =>
-                sg.id === sgId
-                  ? { ...sg, proxies: sg.proxies.filter((px) => px.id !== proxyId), proxyCount: sg.proxies.length - 1 }
-                  : sg
-              ),
-            }
-          : p
-      )
-    )
-    toast.success('Proxy removed')
-  }
+  // ─── Health Check ──────────────────────────────────────────────
 
-  // Health check single proxy
   const healthCheckProxy = (sgId: string, proxyId: string) => {
     if (!selectedPresetId) return
-    const statuses: Proxy['status'][] = ['online', 'online', 'online', 'offline']
+    const statuses: ProxyEntry['status'][] = ['online', 'online', 'online', 'offline']
     setPresets((prev) =>
       prev.map((p) =>
         p.id === selectedPresetId
@@ -400,11 +607,7 @@ export function AdminProxiesPreset() {
                       ...sg,
                       proxies: sg.proxies.map((px) =>
                         px.id === proxyId
-                          ? {
-                              ...px,
-                              status: statuses[Math.floor(Math.random() * statuses.length)],
-                              latency: Math.floor(Math.random() * 150) + 5,
-                            }
+                          ? { ...px, status: statuses[Math.floor(Math.random() * statuses.length)], latency: Math.floor(Math.random() * 150) + 5 }
                           : px
                       ),
                     }
@@ -417,10 +620,9 @@ export function AdminProxiesPreset() {
     toast.success('Proxy health checked')
   }
 
-  // Health check subgroup
   const healthCheckSubgroup = (sgId: string) => {
     if (!selectedPresetId) return
-    const proxyStatuses: Proxy['status'][] = ['online', 'online', 'online', 'offline', 'unknown']
+    const proxyStatuses: ProxyEntry['status'][] = ['online', 'online', 'online', 'offline', 'unknown']
     const subStatuses: Subgroup['status'][] = ['healthy', 'healthy', 'degraded', 'down']
 
     setPresets((prev) =>
@@ -448,14 +650,11 @@ export function AdminProxiesPreset() {
     toast.success('Subgroup health checked')
   }
 
-  // Health check all
   const healthCheckAll = () => {
     setHealthCheckRunning(true)
-
     setTimeout(() => {
-      const proxyStatuses: Proxy['status'][] = ['online', 'online', 'online', 'offline', 'unknown']
+      const proxyStatuses: ProxyEntry['status'][] = ['online', 'online', 'online', 'offline', 'unknown']
       const subStatuses: Subgroup['status'][] = ['healthy', 'healthy', 'degraded', 'down']
-
       let h = 0
       let d = 0
       let dn = 0
@@ -468,7 +667,6 @@ export function AdminProxiesPreset() {
             if (newStatus === 'healthy') h++
             else if (newStatus === 'degraded') d++
             else dn++
-
             return {
               ...sg,
               status: newStatus,
@@ -481,7 +679,6 @@ export function AdminProxiesPreset() {
           }),
         }))
       )
-
       setHealthSummary({ healthy: h, degraded: d, down: dn })
       setHealthCheckRunning(false)
       toast.success('Health check complete')
@@ -511,33 +708,665 @@ export function AdminProxiesPreset() {
     toast.success('Image uploaded (mock)')
   }
 
-  // Update subgroup image dimensions
   const updateSubgroupImageSize = (sgId: string, width: number, height: number) => {
     if (!selectedPresetId) return
     setPresets((prev) =>
       prev.map((p) =>
         p.id === selectedPresetId
-          ? {
-              ...p,
-              subgroups: p.subgroups.map((sg) =>
-                sg.id === sgId ? { ...sg, imageWidth: width, imageHeight: height } : sg
-              ),
-            }
+          ? { ...p, subgroups: p.subgroups.map((sg) => (sg.id === sgId ? { ...sg, imageWidth: width, imageHeight: height } : sg)) }
           : p
       )
     )
   }
 
-  // ============ PRESET LIST VIEW ============
+  // ─── Bulk Upload Examples ──────────────────────────────────────
+
+  const csvExamples = useMemo(() => ({
+    vless: `protocol,address,port,uuid,network,tls,sni,wsPath,wsHost,flow,realityPublicKey,realityShortId,clientFingerprint,grpcService
+vless,node1.example.com,443,your-uuid-here,ws,true,example.com,/ws,example.com,,,,
+vless,node2.example.com,443,your-uuid-here,tcp,true,example.com,,,,abc123pub,abcd1234,chrome,`,
+    vmess: `protocol,address,port,uuid,network,tls,cipher,alterId,sni,wsPath,wsHost,grpcService,skipCertVerify
+vmess,node1.example.com,443,your-uuid-here,ws,true,auto,0,example.com,/ws,example.com,,false
+vmess,node2.example.com,8080,your-uuid-here,grpc,true,auto,0,example.com,,,,grpc-service,false`,
+    trojan: `protocol,address,port,password,network,tls,sni,wsPath,wsHost,grpcService,skipCertVerify
+trojan,node1.example.com,443,your-password,tcp,true,example.com,,,,false
+trojan,node2.example.com,443,your-password,ws,true,example.com,/ws,example.com,,false`,
+    ss: `protocol,address,port,password,cipher,udp,plugin,pluginOptsMode,pluginOptsHost
+ss,node1.example.com,8388,your-password,aes-256-gcm,false,,,
+ss,node2.example.com,8388,your-password,chacha20-ietf-poly1305,true,obfs,http_simple,example.com`,
+    ssr: `protocol,address,port,password,cipher,protocol,obfs,obfsParam
+ssr,node1.example.com,9100,your-password,aes-256-cfb,auth_aes128_sha1,tls1.2_ticket_auth,example.com`,
+    wireguard: `protocol,address,port,privateKey,publicKey,presharedKey,dns,mtu
+wireguard,wg1.example.com,51820,your-private-key,your-public-key,,1.1.1.1,1280`,
+    socks5: `protocol,address,port,username,password,tls,skipCertVerify
+socks5,proxy.example.com,1080,user,pass,false,false`,
+    http: `protocol,address,port,username,password,tls,skipCertVerify
+http,proxy.example.com,8080,user,pass,false,false`,
+  }), [])
+
+  const jsonExamples = useMemo(() => ({
+    vless: `[
+  {
+    "protocol": "vless",
+    "address": "node1.example.com",
+    "port": 443,
+    "uuid": "your-uuid-here",
+    "network": "ws",
+    "tls": true,
+    "sni": "example.com",
+    "wsPath": "/ws",
+    "wsHost": "example.com"
+  }
+]`,
+    vmess: `[
+  {
+    "protocol": "vmess",
+    "address": "node1.example.com",
+    "port": 443,
+    "uuid": "your-uuid-here",
+    "network": "grpc",
+    "tls": true,
+    "cipher": "auto",
+    "grpcService": "grpc-service"
+  }
+]`,
+    trojan: `[
+  {
+    "protocol": "trojan",
+    "address": "node1.example.com",
+    "port": 443,
+    "password": "your-password",
+    "network": "tcp",
+    "tls": true,
+    "sni": "example.com"
+  }
+]`,
+    ss: `[
+  {
+    "protocol": "ss",
+    "address": "node1.example.com",
+    "port": 8388,
+    "password": "your-password",
+    "cipher": "aes-256-gcm"
+  }
+]`,
+    ssr: `[
+  {
+    "protocol": "ssr",
+    "address": "node1.example.com",
+    "port": 9100,
+    "password": "your-password",
+    "cipher": "aes-256-cfb",
+    "ssrProtocol": "auth_aes128_sha1",
+    "obfs": "tls1.2_ticket_auth"
+  }
+]`,
+    wireguard: `[
+  {
+    "protocol": "wireguard",
+    "address": "wg1.example.com",
+    "port": 51820,
+    "privateKey": "your-private-key",
+    "publicKey": "your-public-key",
+    "dns": "1.1.1.1",
+    "mtu": 1280
+  }
+]`,
+    socks5: `[
+  {
+    "protocol": "socks5",
+    "address": "proxy.example.com",
+    "port": 1080,
+    "username": "user",
+    "password": "pass"
+  }
+]`,
+    http: `[
+  {
+    "protocol": "http",
+    "address": "proxy.example.com",
+    "port": 8080,
+    "username": "user",
+    "password": "pass"
+  }
+]`,
+  }), [])
+
+  // ─── Proxy Form Fields ─────────────────────────────────────────
+
+  const renderProxyFormFields = () => {
+    const protocol = proxyForm.protocol ?? 'vless'
+
+    // Auth field based on protocol
+    const renderAuthField = () => {
+      if (['vless', 'vmess'].includes(protocol)) {
+        return (
+          <div className="space-y-2">
+            <Label>UUID</Label>
+            <Input
+              value={proxyForm.uuid ?? ''}
+              onChange={(e) => setProxyForm((f) => ({ ...f, uuid: e.target.value }))}
+              placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+            />
+          </div>
+        )
+      }
+      if (['trojan', 'ss', 'ssr'].includes(protocol)) {
+        return (
+          <div className="space-y-2">
+            <Label>Password</Label>
+            <Input
+              value={proxyForm.password ?? ''}
+              onChange={(e) => setProxyForm((f) => ({ ...f, password: e.target.value }))}
+              placeholder="Password"
+              type="password"
+            />
+          </div>
+        )
+      }
+      if (['wireguard'].includes(protocol)) {
+        return (
+          <div className="space-y-2">
+            <Label>Private Key</Label>
+            <Input
+              value={proxyForm.privateKey ?? ''}
+              onChange={(e) => setProxyForm((f) => ({ ...f, privateKey: e.target.value }))}
+              placeholder="Private key"
+              type="password"
+            />
+          </div>
+        )
+      }
+      if (['socks5', 'http'].includes(protocol)) {
+        return (
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>Username (optional)</Label>
+              <Input
+                value={proxyForm.username ?? ''}
+                onChange={(e) => setProxyForm((f) => ({ ...f, username: e.target.value }))}
+                placeholder="Username"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Password (optional)</Label>
+              <Input
+                value={proxyForm.password ?? ''}
+                onChange={(e) => setProxyForm((f) => ({ ...f, password: e.target.value }))}
+                placeholder="Password"
+                type="password"
+              />
+            </div>
+          </div>
+        )
+      }
+      return null
+    }
+
+    // Network selector (for protocols that support it)
+    const renderNetworkField = () => {
+      if (!['vless', 'vmess', 'trojan'].includes(protocol)) return null
+      return (
+        <div className="space-y-2">
+          <Label>Network</Label>
+          <Select
+            value={proxyForm.network ?? 'tcp'}
+            onValueChange={(v) => setProxyForm((f) => ({ ...f, network: v }))}
+          >
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {NETWORK_OPTIONS.map((n) => (
+                <SelectItem key={n} value={n}>{n.toUpperCase()}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )
+    }
+
+    // TLS toggle
+    const renderTlsField = () => {
+      if (!['vless', 'vmess', 'trojan', 'socks5', 'http'].includes(protocol)) return null
+      return (
+        <div className="flex items-center justify-between">
+          <Label>TLS</Label>
+          <Switch
+            checked={proxyForm.tls ?? false}
+            onCheckedChange={(checked) => setProxyForm((f) => ({ ...f, tls: checked }))}
+          />
+        </div>
+      )
+    }
+
+    // SNI
+    const renderSniField = () => {
+      if (!['vless', 'vmess', 'trojan'].includes(protocol)) return null
+      return (
+        <div className="space-y-2">
+          <Label>SNI / Server Name</Label>
+          <Input
+            value={proxyForm.sni ?? ''}
+            onChange={(e) => setProxyForm((f) => ({ ...f, sni: e.target.value }))}
+            placeholder="example.com"
+          />
+        </div>
+      )
+    }
+
+    // Skip cert verify
+    const renderSkipCertVerify = () => {
+      if (!['vmess', 'trojan', 'socks5', 'http'].includes(protocol)) return null
+      return (
+        <div className="flex items-center justify-between">
+          <Label>Skip Cert Verify</Label>
+          <Switch
+            checked={proxyForm.skipCertVerify ?? false}
+            onCheckedChange={(checked) => setProxyForm((f) => ({ ...f, skipCertVerify: checked }))}
+          />
+        </div>
+      )
+    }
+
+    // VLESS: Flow
+    const renderVlessFields = () => {
+      if (protocol !== 'vless') return null
+      return (
+        <>
+          <div className="space-y-2">
+            <Label>Flow</Label>
+            <Select
+              value={proxyForm.flow ?? ''}
+              onValueChange={(v) => setProxyForm((f) => ({ ...f, flow: v }))}
+            >
+              <SelectTrigger><SelectValue placeholder="Select flow" /></SelectTrigger>
+              <SelectContent>
+                {FLOW_OPTIONS.map((f) => (
+                  <SelectItem key={f} value={f || 'none'}>{f || 'None'}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Client Fingerprint</Label>
+            <Select
+              value={proxyForm.clientFingerprint ?? ''}
+              onValueChange={(v) => setProxyForm((f) => ({ ...f, clientFingerprint: v }))}
+            >
+              <SelectTrigger><SelectValue placeholder="Select fingerprint" /></SelectTrigger>
+              <SelectContent>
+                {CLIENT_FINGERPRINT_OPTIONS.map((fp) => (
+                  <SelectItem key={fp} value={fp}>{fp.charAt(0).toUpperCase() + fp.slice(1)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </>
+      )
+    }
+
+    // VLESS Reality fields
+    const renderRealityFields = () => {
+      if (protocol !== 'vless') return null
+      return (
+        <div className="space-y-3 rounded-lg border border-purple-500/20 bg-purple-500/5 p-3">
+          <div className="text-sm font-medium text-purple-600">Reality Options</div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>Public Key</Label>
+              <Input
+                value={proxyForm.realityPublicKey ?? ''}
+                onChange={(e) => setProxyForm((f) => ({ ...f, realityPublicKey: e.target.value }))}
+                placeholder="Reality public key"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Short ID</Label>
+              <Input
+                value={proxyForm.realityShortId ?? ''}
+                onChange={(e) => setProxyForm((f) => ({ ...f, realityShortId: e.target.value }))}
+                placeholder="Short ID"
+              />
+            </div>
+          </div>
+        </div>
+      )
+    }
+
+    // VMess specific
+    const renderVmessFields = () => {
+      if (protocol !== 'vmess') return null
+      return (
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-2">
+            <Label>Cipher</Label>
+            <Select
+              value={proxyForm.cipher ?? 'auto'}
+              onValueChange={(v) => setProxyForm((f) => ({ ...f, cipher: v }))}
+            >
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {VMESS_CIPHER_OPTIONS.map((c) => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Alter ID</Label>
+            <Input
+              type="number"
+              value={proxyForm.alterId ?? 0}
+              onChange={(e) => setProxyForm((f) => ({ ...f, alterId: parseInt(e.target.value) || 0 }))}
+              min={0}
+            />
+          </div>
+        </div>
+      )
+    }
+
+    // gRPC opts (conditional on network=grpc)
+    const renderGrpcFields = () => {
+      if (proxyForm.network !== 'grpc') return null
+      if (!['vless', 'vmess', 'trojan'].includes(protocol)) return null
+      return (
+        <div className="space-y-2">
+          <Label>gRPC Service Name</Label>
+          <Input
+            value={proxyForm.grpcService ?? ''}
+            onChange={(e) => setProxyForm((f) => ({ ...f, grpcService: e.target.value }))}
+            placeholder="grpc-service-name"
+          />
+        </div>
+      )
+    }
+
+    // WebSocket opts (conditional on network=ws)
+    const renderWsFields = () => {
+      if (proxyForm.network !== 'ws') return null
+      if (!['vless', 'vmess', 'trojan'].includes(protocol)) return null
+      return (
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-2">
+            <Label>WS Path</Label>
+            <Input
+              value={proxyForm.wsPath ?? ''}
+              onChange={(e) => setProxyForm((f) => ({ ...f, wsPath: e.target.value }))}
+              placeholder="/ws"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>WS Host</Label>
+            <Input
+              value={proxyForm.wsHost ?? ''}
+              onChange={(e) => setProxyForm((f) => ({ ...f, wsHost: e.target.value }))}
+              placeholder="example.com"
+            />
+          </div>
+        </div>
+      )
+    }
+
+    // SS specific
+    const renderSsFields = () => {
+      if (protocol !== 'ss') return null
+      return (
+        <>
+          <div className="space-y-2">
+            <Label>Cipher</Label>
+            <Select
+              value={proxyForm.cipher ?? 'aes-256-gcm'}
+              onValueChange={(v) => setProxyForm((f) => ({ ...f, cipher: v }))}
+            >
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {SS_CIPHER_OPTIONS.map((c) => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center justify-between">
+            <Label>UDP</Label>
+            <Switch
+              checked={proxyForm.udp ?? false}
+              onCheckedChange={(checked) => setProxyForm((f) => ({ ...f, udp: checked }))}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Plugin</Label>
+            <Select
+              value={proxyForm.plugin ?? ''}
+              onValueChange={(v) => setProxyForm((f) => ({ ...f, plugin: v }))}
+            >
+              <SelectTrigger><SelectValue placeholder="Select plugin" /></SelectTrigger>
+              <SelectContent>
+                {SS_PLUGIN_OPTIONS.map((p) => (
+                  <SelectItem key={p} value={p || 'none'}>{p || 'None'}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {proxyForm.plugin === 'obfs' && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Plugin Mode</Label>
+                <Input
+                  value={proxyForm.pluginOptsMode ?? ''}
+                  onChange={(e) => setProxyForm((f) => ({ ...f, pluginOptsMode: e.target.value }))}
+                  placeholder="http / tls"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Plugin Host</Label>
+                <Input
+                  value={proxyForm.pluginOptsHost ?? ''}
+                  onChange={(e) => setProxyForm((f) => ({ ...f, pluginOptsHost: e.target.value }))}
+                  placeholder="example.com"
+                />
+              </div>
+            </div>
+          )}
+        </>
+      )
+    }
+
+    // SSR specific
+    const renderSsrFields = () => {
+      if (protocol !== 'ssr') return null
+      return (
+        <>
+          <div className="space-y-2">
+            <Label>Cipher</Label>
+            <Select
+              value={proxyForm.cipher ?? 'aes-256-cfb'}
+              onValueChange={(v) => setProxyForm((f) => ({ ...f, cipher: v }))}
+            >
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {SSR_CIPHER_OPTIONS.map((c) => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>Protocol</Label>
+              <Select
+                value={proxyForm.ssrProtocol ?? 'origin'}
+                onValueChange={(v) => setProxyForm((f) => ({ ...f, ssrProtocol: v }))}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {SSR_PROTOCOL_OPTIONS.map((p) => (
+                    <SelectItem key={p} value={p}>{p}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Obfs</Label>
+              <Select
+                value={proxyForm.obfs ?? 'plain'}
+                onValueChange={(v) => setProxyForm((f) => ({ ...f, obfs: v }))}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {SSR_OBFS_OPTIONS.map((o) => (
+                    <SelectItem key={o} value={o}>{o}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Obfs Param</Label>
+            <Input
+              value={proxyForm.obfsParam ?? ''}
+              onChange={(e) => setProxyForm((f) => ({ ...f, obfsParam: e.target.value }))}
+              placeholder="Optional obfs param"
+            />
+          </div>
+        </>
+      )
+    }
+
+    // WireGuard specific
+    const renderWireguardFields = () => {
+      if (protocol !== 'wireguard') return null
+      return (
+        <>
+          <div className="space-y-2">
+            <Label>Public Key</Label>
+            <Input
+              value={proxyForm.publicKey ?? ''}
+              onChange={(e) => setProxyForm((f) => ({ ...f, publicKey: e.target.value }))}
+              placeholder="Public key"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Preshared Key (optional)</Label>
+            <Input
+              value={proxyForm.presharedKey ?? ''}
+              onChange={(e) => setProxyForm((f) => ({ ...f, presharedKey: e.target.value }))}
+              placeholder="Preshared key"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>DNS (optional)</Label>
+              <Input
+                value={proxyForm.dns ?? ''}
+                onChange={(e) => setProxyForm((f) => ({ ...f, dns: e.target.value }))}
+                placeholder="1.1.1.1"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>MTU (optional)</Label>
+              <Input
+                type="number"
+                value={proxyForm.mtu ?? ''}
+                onChange={(e) => setProxyForm((f) => ({ ...f, mtu: parseInt(e.target.value) || undefined }))}
+                placeholder="1280"
+              />
+            </div>
+          </div>
+        </>
+      )
+    }
+
+    // ALPN (vless/vmess)
+    const renderAlpnField = () => {
+      if (!['vless', 'vmess'].includes(protocol)) return null
+      return (
+        <div className="space-y-2">
+          <Label>ALPN (optional)</Label>
+          <Input
+            value={proxyForm.alpn ?? ''}
+            onChange={(e) => setProxyForm((f) => ({ ...f, alpn: e.target.value }))}
+            placeholder="h2,http/1.1"
+          />
+        </div>
+      )
+    }
+
+    return (
+      <div className="space-y-4 max-h-[65vh] overflow-y-auto pr-1">
+        {/* Protocol selector */}
+        <div className="space-y-2">
+          <Label className="text-sm font-semibold">Protocol</Label>
+          <div className="grid grid-cols-4 gap-2">
+            {PROTOCOLS.map((p) => (
+              <Button
+                key={p.value}
+                type="button"
+                variant={proxyForm.protocol === p.value ? 'default' : 'outline'}
+                size="sm"
+                className={`text-xs ${proxyForm.protocol === p.value ? PROTOCOL_COLORS[p.value] + ' border-2 font-bold' : ''}`}
+                onClick={() => handleProtocolChange(p.value)}
+              >
+                {p.label}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        <Separator />
+
+        {/* Common fields: Address + Port */}
+        <div className="grid grid-cols-3 gap-3">
+          <div className="col-span-2 space-y-2">
+            <Label>Address</Label>
+            <Input
+              value={proxyForm.address ?? ''}
+              onChange={(e) => setProxyForm((f) => ({ ...f, address: e.target.value }))}
+              placeholder="node.example.com"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Port</Label>
+            <Input
+              type="number"
+              value={proxyForm.port ?? 443}
+              onChange={(e) => setProxyForm((f) => ({ ...f, port: parseInt(e.target.value) || 443 }))}
+            />
+          </div>
+        </div>
+
+        {/* Auth fields */}
+        {renderAuthField()}
+
+        <Separator />
+
+        {/* Protocol-specific fields */}
+        {renderVlessFields()}
+        {renderVmessFields()}
+        {renderNetworkField()}
+        {renderTlsField()}
+        {renderSniField()}
+        {renderSkipCertVerify()}
+        {renderAlpnField()}
+        {renderRealityFields()}
+        {renderGrpcFields()}
+        {renderWsFields()}
+        {renderSsFields()}
+        {renderSsrFields()}
+        {renderWireguardFields()}
+      </div>
+    )
+  }
+
+  // ─── PRESET LIST VIEW ──────────────────────────────────────────
+
   if (!selectedPreset) {
     return (
-      <div className="dark space-y-6">
+      <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Proxy Presets</h1>
             <p className="text-muted-foreground text-sm">
-              Manage proxy presets and load-balanced subgroups
+              Manage proxy presets, subgroups, and per-protocol configurations
             </p>
           </div>
           <div className="flex gap-2">
@@ -578,7 +1407,13 @@ export function AdminProxiesPreset() {
         {/* Preset Cards */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {presets.map((preset) => {
-            const totalProxies = preset.subgroups.reduce((sum, sg) => sum + sg.proxyCount, 0)
+            const totalProxies = preset.subgroups.reduce((sum, sg) => sum + sg.proxies.length, 0)
+            const protocolCounts = preset.subgroups.reduce((acc, sg) => {
+              sg.proxies.forEach((px) => {
+                acc[px.protocol] = (acc[px.protocol] || 0) + 1
+              })
+              return acc
+            }, {} as Record<string, number>)
             return (
               <Card
                 key={preset.id}
@@ -617,6 +1452,16 @@ export function AdminProxiesPreset() {
                       <div className="text-xs text-muted-foreground">Users</div>
                     </div>
                   </div>
+                  {/* Protocol badges */}
+                  {Object.keys(protocolCounts).length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      {Object.entries(protocolCounts).map(([proto, count]) => (
+                        <Badge key={proto} variant="outline" className={`text-xs ${PROTOCOL_COLORS[proto as ProxyProtocol] ?? ''}`}>
+                          {proto.toUpperCase()} ×{count}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
                   {/* Subgroup status indicators */}
                   <div className="mt-3 flex flex-wrap gap-1.5">
                     {preset.subgroups.map((sg) => (
@@ -641,9 +1486,7 @@ export function AdminProxiesPreset() {
             <DialogHeader>
               <DialogTitle>{editingPreset ? 'Edit Preset' : 'Add New Preset'}</DialogTitle>
               <DialogDescription>
-                {editingPreset
-                  ? 'Update preset details'
-                  : 'Create a new proxy preset with subgroups'}
+                {editingPreset ? 'Update preset details' : 'Create a new proxy preset with subgroups'}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
@@ -676,9 +1519,7 @@ export function AdminProxiesPreset() {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setPresetDialogOpen(false)}>
-                Cancel
-              </Button>
+              <Button variant="outline" onClick={() => setPresetDialogOpen(false)}>Cancel</Button>
               <Button onClick={savePreset}>Save</Button>
             </DialogFooter>
           </DialogContent>
@@ -690,16 +1531,12 @@ export function AdminProxiesPreset() {
             <AlertDialogHeader>
               <AlertDialogTitle>Delete Preset</AlertDialogTitle>
               <AlertDialogDescription>
-                This will permanently delete this preset and all its subgroups and proxies. This
-                action cannot be undone.
+                This will permanently delete this preset and all its subgroups and proxies. This action cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={deletePreset}
-                className="bg-red-600 hover:bg-red-700"
-              >
+              <AlertDialogAction onClick={deletePreset} className="bg-red-600 hover:bg-red-700">
                 Delete
               </AlertDialogAction>
             </AlertDialogFooter>
@@ -709,17 +1546,14 @@ export function AdminProxiesPreset() {
     )
   }
 
-  // ============ PRESET DETAIL VIEW ============
+  // ─── PRESET DETAIL VIEW ────────────────────────────────────────
+
   return (
-    <div className="dark space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setSelectedPresetId(null)}
-          >
+          <Button variant="ghost" size="icon" onClick={() => setSelectedPresetId(null)}>
             <ArrowLeft className="size-5" />
           </Button>
           <div>
@@ -728,19 +1562,11 @@ export function AdminProxiesPreset() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={() => openEditPreset(selectedPreset)}
-            className="gap-2"
-          >
+          <Button variant="outline" onClick={() => openEditPreset(selectedPreset)} className="gap-2">
             <Pencil className="size-4" />
             Edit
           </Button>
-          <Button
-            variant="destructive"
-            onClick={() => confirmDeletePreset(selectedPreset.id)}
-            className="gap-2"
-          >
+          <Button variant="destructive" onClick={() => confirmDeletePreset(selectedPreset.id)} className="gap-2">
             <Trash2 className="size-4" />
             Delete
           </Button>
@@ -756,7 +1582,7 @@ export function AdminProxiesPreset() {
             </div>
             <div>
               <div className="text-2xl font-bold">
-                {selectedPreset.subgroups.reduce((s, sg) => s + sg.proxyCount, 0)}
+                {selectedPreset.subgroups.reduce((s, sg) => s + sg.proxies.length, 0)}
               </div>
               <div className="text-xs text-muted-foreground">Total Proxies</div>
             </div>
@@ -809,12 +1635,7 @@ export function AdminProxiesPreset() {
             <Plus className="size-4" />
             Add Subgroup
           </Button>
-          <Button
-            variant="outline"
-            onClick={healthCheckAll}
-            disabled={healthCheckRunning}
-            className="gap-2"
-          >
+          <Button variant="outline" onClick={healthCheckAll} disabled={healthCheckRunning} className="gap-2">
             <Activity className="size-4" />
             {healthCheckRunning ? 'Checking...' : 'Health Check All'}
           </Button>
@@ -854,10 +1675,7 @@ export function AdminProxiesPreset() {
           const isExpanded = expandedSubgroups.has(sg.id)
           return (
             <Card key={sg.id}>
-              <CardHeader
-                className="cursor-pointer"
-                onClick={() => toggleSubgroup(sg.id)}
-              >
+              <CardHeader className="cursor-pointer" onClick={() => toggleSubgroup(sg.id)}>
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
                     {isExpanded ? (
@@ -869,38 +1687,25 @@ export function AdminProxiesPreset() {
                       <div className="flex items-center gap-2">
                         <CardTitle className="text-base">{sg.name}</CardTitle>
                         <StatusDot status={sg.status} />
-                        <Badge variant="outline" className="text-xs">
-                          {sg.status}
-                        </Badge>
+                        <Badge variant="outline" className="text-xs">{sg.status}</Badge>
                       </div>
-                      <CardDescription>{sg.proxyCount} proxies</CardDescription>
+                      <CardDescription>{sg.proxies.length} proxies</CardDescription>
                     </div>
                   </div>
                   <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => healthCheckSubgroup(sg.id)}
-                      className="gap-1.5"
-                    >
+                    <Button variant="outline" size="sm" onClick={() => openAddProxy(sg.id)} className="gap-1.5">
+                      <Plus className="size-3.5" />
+                      Add
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => healthCheckSubgroup(sg.id)} className="gap-1.5">
                       <HeartPulse className="size-3.5" />
                       Check
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => openBulkUpload(sg.id)}
-                      className="gap-1.5"
-                    >
+                    <Button variant="outline" size="sm" onClick={() => openBulkUpload(sg.id)} className="gap-1.5">
                       <Upload className="size-3.5" />
-                      Bulk Upload
+                      Bulk
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => deleteSubgroup(sg.id)}
-                      className="text-red-500 hover:text-red-400"
-                    >
+                    <Button variant="ghost" size="sm" onClick={() => deleteSubgroup(sg.id)} className="text-red-500 hover:text-red-400">
                       <Trash2 className="size-3.5" />
                     </Button>
                   </div>
@@ -944,13 +1749,7 @@ export function AdminProxiesPreset() {
                         <Input
                           type="number"
                           value={sg.imageWidth}
-                          onChange={(e) =>
-                            updateSubgroupImageSize(
-                              sg.id,
-                              parseInt(e.target.value) || 200,
-                              sg.imageHeight
-                            )
-                          }
+                          onChange={(e) => updateSubgroupImageSize(sg.id, parseInt(e.target.value) || 200, sg.imageHeight)}
                           className="w-20"
                         />
                       </div>
@@ -960,13 +1759,7 @@ export function AdminProxiesPreset() {
                         <Input
                           type="number"
                           value={sg.imageHeight}
-                          onChange={(e) =>
-                            updateSubgroupImageSize(
-                              sg.id,
-                              sg.imageWidth,
-                              parseInt(e.target.value) || 100
-                            )
-                          }
+                          onChange={(e) => updateSubgroupImageSize(sg.id, sg.imageWidth, parseInt(e.target.value) || 100)}
                           className="w-20"
                         />
                       </div>
@@ -976,16 +1769,17 @@ export function AdminProxiesPreset() {
                   {/* Proxy Table */}
                   {sg.proxies.length === 0 ? (
                     <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-                      No proxies in this subgroup. Use Bulk Upload to add proxies.
+                      No proxies in this subgroup. Click &quot;Add&quot; or &quot;Bulk&quot; to add proxies.
                     </div>
                   ) : (
                     <div className="max-h-96 overflow-y-auto rounded-lg border">
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Address</TableHead>
-                            <TableHead>Port</TableHead>
+                            <TableHead>Address:Port</TableHead>
                             <TableHead>Protocol</TableHead>
+                            <TableHead>Network</TableHead>
+                            <TableHead>TLS</TableHead>
                             <TableHead>Status</TableHead>
                             <TableHead>Latency</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
@@ -995,13 +1789,26 @@ export function AdminProxiesPreset() {
                           {sg.proxies.map((proxy) => (
                             <TableRow key={proxy.id}>
                               <TableCell className="font-mono text-sm">
-                                {proxy.address}
+                                {proxy.address}:{proxy.port}
                               </TableCell>
-                              <TableCell>{proxy.port}</TableCell>
                               <TableCell>
-                                <Badge variant="outline" className="text-xs">
-                                  {proxy.protocol}
-                                </Badge>
+                                <ProtocolBadge protocol={proxy.protocol} />
+                              </TableCell>
+                              <TableCell>
+                                {proxy.network ? (
+                                  <Badge variant="outline" className="text-xs">{proxy.network.toUpperCase()}</Badge>
+                                ) : (
+                                  <span className="text-muted-foreground">—</span>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {proxy.tls !== undefined ? (
+                                  <Badge variant={proxy.tls ? 'default' : 'secondary'} className="text-xs">
+                                    {proxy.tls ? 'TLS' : 'No'}
+                                  </Badge>
+                                ) : (
+                                  <span className="text-muted-foreground">—</span>
+                                )}
                               </TableCell>
                               <TableCell>
                                 <span className="inline-flex items-center gap-1.5 text-sm">
@@ -1014,6 +1821,14 @@ export function AdminProxiesPreset() {
                               </TableCell>
                               <TableCell className="text-right">
                                 <div className="flex justify-end gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => openEditProxy(sg.id, proxy)}
+                                    className="size-8 p-0"
+                                  >
+                                    <Pencil className="size-3.5" />
+                                  </Button>
                                   <Button
                                     variant="ghost"
                                     size="sm"
@@ -1084,9 +1899,7 @@ export function AdminProxiesPreset() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setPresetDialogOpen(false)}>
-              Cancel
-            </Button>
+            <Button variant="outline" onClick={() => setPresetDialogOpen(false)}>Cancel</Button>
             <Button onClick={savePreset}>Save</Button>
           </DialogFooter>
         </DialogContent>
@@ -1110,135 +1923,161 @@ export function AdminProxiesPreset() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Add Subgroup Dialog */}
-      <Dialog open={subgroupDialogOpen} onOpenChange={setSubgroupDialogOpen}>
-        <DialogContent>
+      {/* Add/Edit Proxy Dialog */}
+      <Dialog open={proxyDialogOpen} onOpenChange={setProxyDialogOpen}>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Add Subgroup</DialogTitle>
+            <DialogTitle>{editingProxy ? 'Edit Proxy' : 'Add Proxy'}</DialogTitle>
             <DialogDescription>
-              Add a new load-balanced subgroup to this preset
+              {editingProxy
+                ? `Editing ${editingProxy.protocol.toUpperCase()} proxy at ${editingProxy.address}:${editingProxy.port}`
+                : 'Configure a new proxy with protocol-specific settings'}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="sg-name">Name</Label>
-              <Input
-                id="sg-name"
-                value={subgroupForm.name}
-                onChange={(e) => setSubgroupForm((f) => ({ ...f, name: e.target.value }))}
-                placeholder="e.g., Dhaka"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Image (optional)</Label>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" className="gap-1.5">
-                  <ImagePlus className="size-3.5" />
-                  Choose File
-                </Button>
-                <span className="text-xs text-muted-foreground">SVG or PNG</span>
-              </div>
-            </div>
-            <div className="flex items-end gap-2">
-              <div className="space-y-2">
-                <Label htmlFor="sg-img-w">Image Width</Label>
-                <Input
-                  id="sg-img-w"
-                  type="number"
-                  value={subgroupForm.imageWidth}
-                  onChange={(e) =>
-                    setSubgroupForm((f) => ({
-                      ...f,
-                      imageWidth: parseInt(e.target.value) || 200,
-                    }))
-                  }
-                  className="w-24"
-                />
-              </div>
-              <span className="text-muted-foreground">×</span>
-              <div className="space-y-2">
-                <Label htmlFor="sg-img-h">Image Height</Label>
-                <Input
-                  id="sg-img-h"
-                  type="number"
-                  value={subgroupForm.imageHeight}
-                  onChange={(e) =>
-                    setSubgroupForm((f) => ({
-                      ...f,
-                      imageHeight: parseInt(e.target.value) || 100,
-                    }))
-                  }
-                  className="w-24"
-                />
-              </div>
-            </div>
-          </div>
+          {renderProxyFormFields()}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setSubgroupDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={saveSubgroup}>Add Subgroup</Button>
+            <Button variant="outline" onClick={() => setProxyDialogOpen(false)}>Cancel</Button>
+            <Button onClick={saveProxy}>{editingProxy ? 'Update' : 'Add Proxy'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Bulk Upload Dialog */}
       <Dialog open={bulkUploadOpen} onOpenChange={setBulkUploadOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Bulk Upload Proxies</DialogTitle>
             <DialogDescription>
-              Paste proxy data in CSV or JSON format to add multiple proxies at once
+              Add multiple proxies at once using CSV or JSON format
             </DialogDescription>
           </DialogHeader>
           <Tabs value={bulkUploadTab} onValueChange={setBulkUploadTab}>
-            <TabsList className="w-full">
-              <TabsTrigger value="csv" className="flex-1">
-                CSV
-              </TabsTrigger>
-              <TabsTrigger value="json" className="flex-1">
-                JSON
-              </TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="csv">CSV</TabsTrigger>
+              <TabsTrigger value="json">JSON</TabsTrigger>
             </TabsList>
             <TabsContent value="csv" className="space-y-3">
-              <div className="rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
-                <p className="mb-1 font-medium text-foreground">CSV Format:</p>
-                <code className="block whitespace-pre text-emerald-400">
-                  address,port,protocol{'\n'}1.2.3.4,8080,ss{'\n'}5.6.7.8,443,vmess
-                </code>
+              <div className="space-y-2">
+                <Label>CSV Data</Label>
+                <Textarea
+                  value={bulkUploadData}
+                  onChange={(e) => setBulkUploadData(e.target.value)}
+                  placeholder={`protocol,address,port,uuid,password,...\nvless,node.example.com,443,your-uuid,,ws,true,...`}
+                  rows={6}
+                  className="font-mono text-xs"
+                />
               </div>
-              <Textarea
-                value={bulkUploadTab === 'csv' ? bulkUploadData : ''}
-                onChange={(e) => setBulkUploadData(e.target.value)}
-                placeholder="Paste CSV data here..."
-                rows={6}
-                className="font-mono text-sm"
-              />
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs text-muted-foreground">Example formats by protocol</Label>
+                </div>
+                <div className="max-h-48 overflow-y-auto space-y-2">
+                  {Object.entries(csvExamples).map(([proto, example]) => (
+                    <details key={proto} className="group">
+                      <summary className="cursor-pointer text-xs font-medium text-muted-foreground hover:text-foreground">
+                        {proto.toUpperCase()} CSV Format
+                      </summary>
+                      <pre className="mt-1 rounded-md bg-muted p-2 text-[10px] leading-relaxed overflow-x-auto">
+                        {example}
+                      </pre>
+                    </details>
+                  ))}
+                </div>
+              </div>
             </TabsContent>
             <TabsContent value="json" className="space-y-3">
-              <div className="rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
-                <p className="mb-1 font-medium text-foreground">JSON Format:</p>
-                <code className="block whitespace-pre text-emerald-400">
-                  {'[{"address":"1.2.3.4","port":8080,"protocol":"ss"}]'}
-                </code>
+              <div className="space-y-2">
+                <Label>JSON Data</Label>
+                <Textarea
+                  value={bulkUploadData}
+                  onChange={(e) => setBulkUploadData(e.target.value)}
+                  placeholder='[{"protocol":"vless","address":"...","port":443,"uuid":"..."}]'
+                  rows={6}
+                  className="font-mono text-xs"
+                />
               </div>
-              <Textarea
-                value={bulkUploadTab === 'json' ? bulkUploadData : ''}
-                onChange={(e) => setBulkUploadData(e.target.value)}
-                placeholder="Paste JSON data here..."
-                rows={6}
-                className="font-mono text-sm"
-              />
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs text-muted-foreground">Example formats by protocol</Label>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 gap-1 text-xs"
+                    onClick={() => {
+                      const currentExample = jsonExamples[(Object.keys(jsonExamples) as Array<keyof typeof jsonExamples>)[0]]
+                      if (currentExample) {
+                        setBulkUploadData(currentExample)
+                        toast.success('Example loaded')
+                      }
+                    }}
+                  >
+                    <Copy className="size-3" />
+                    Use Example
+                  </Button>
+                </div>
+                <div className="max-h-48 overflow-y-auto space-y-2">
+                  {Object.entries(jsonExamples).map(([proto, example]) => (
+                    <details key={proto} className="group">
+                      <summary className="cursor-pointer text-xs font-medium text-muted-foreground hover:text-foreground">
+                        {proto.toUpperCase()} JSON Format
+                      </summary>
+                      <pre className="mt-1 rounded-md bg-muted p-2 text-[10px] leading-relaxed overflow-x-auto">
+                        {example}
+                      </pre>
+                    </details>
+                  ))}
+                </div>
+              </div>
             </TabsContent>
           </Tabs>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setBulkUploadOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={processBulkUpload} className="gap-2">
-              <Upload className="size-4" />
-              Upload
-            </Button>
+            <Button variant="outline" onClick={() => setBulkUploadOpen(false)}>Cancel</Button>
+            <Button onClick={processBulkUpload}>Upload</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Subgroup Dialog */}
+      <Dialog open={subgroupDialogOpen} onOpenChange={setSubgroupDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Subgroup</DialogTitle>
+            <DialogDescription>Create a new subgroup within this preset</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Subgroup Name</Label>
+              <Input
+                value={subgroupForm.name}
+                onChange={(e) => setSubgroupForm((f) => ({ ...f, name: e.target.value }))}
+                placeholder="e.g., Dhaka"
+              />
+            </div>
+            <div className="flex items-end gap-2">
+              <div className="space-y-1">
+                <Label className="text-xs">Image Width</Label>
+                <Input
+                  type="number"
+                  value={subgroupForm.imageWidth}
+                  onChange={(e) => setSubgroupForm((f) => ({ ...f, imageWidth: parseInt(e.target.value) || 200 }))}
+                  className="w-20"
+                />
+              </div>
+              <span className="text-muted-foreground">×</span>
+              <div className="space-y-1">
+                <Label className="text-xs">Image Height</Label>
+                <Input
+                  type="number"
+                  value={subgroupForm.imageHeight}
+                  onChange={(e) => setSubgroupForm((f) => ({ ...f, imageHeight: parseInt(e.target.value) || 100 }))}
+                  className="w-20"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSubgroupDialogOpen(false)}>Cancel</Button>
+            <Button onClick={saveSubgroup}>Add Subgroup</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

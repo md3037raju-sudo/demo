@@ -98,12 +98,11 @@ export function AboutPage() {
             </Badge>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-foreground max-w-3xl mx-auto leading-tight">
               Building the future of{' '}
-              <span className="text-primary">enterprise security</span>
+              <span className="text-primary">private browsing</span>
             </h1>
             <p className="mt-6 text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-              CoreX was founded with a single mission: to make world-class
-              security accessible to every organization, regardless of size or
-              budget.
+              CoreX was founded with a single mission: to make premium proxy
+              access affordable and simple for everyone.
             </p>
           </div>
         </section>
@@ -115,7 +114,7 @@ export function AboutPage() {
               Our Mission
             </h2>
             <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
-              Democratizing security for the modern enterprise
+              Making premium proxy access affordable and simple
             </p>
           </div>
           <Card className="bg-card border-border/50 max-w-3xl mx-auto">
@@ -125,15 +124,14 @@ export function AboutPage() {
               </div>
               <div className="space-y-3">
                 <h3 className="text-lg font-semibold text-foreground">
-                  Making Enterprise Security Accessible
+                  Making Premium Proxy Access Affordable
                 </h3>
                 <p className="text-muted-foreground leading-relaxed">
-                  We believe that every organization deserves the same level of
-                  security protection that Fortune 500 companies enjoy. Our
-                  platform removes the complexity and cost barriers that have
-                  traditionally kept advanced security solutions out of reach for
-                  small and mid-sized businesses. With CoreX, enterprise-grade
-                  security is just a few clicks away.
+                  We believe everyone deserves fast, private internet access
+                  without paying a premium. Our Clash-powered platform removes
+                  the complexity and cost barriers that have traditionally kept
+                  quality proxy services out of reach. With CoreX, blazing-fast
+                  proxy connections are just a few clicks away.
                 </p>
               </div>
             </CardContent>
@@ -159,13 +157,13 @@ export function AboutPage() {
                 <div className="flex items-center justify-center size-12 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors">
                   <Shield className="size-6 text-primary" />
                 </div>
-                <CardTitle className="text-lg">Security First</CardTitle>
+                <CardTitle className="text-lg">Privacy First</CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription className="text-muted-foreground leading-relaxed">
-                  Every feature we build has security at its core. We never
-                  compromise on protection, and our architecture is designed with
-                  defense-in-depth from the ground up.
+                  Your privacy is our top priority. We never log your browsing
+                  activity, and our architecture is designed to keep your real
+                  identity hidden at all times.
                 </CardDescription>
               </CardContent>
             </Card>
@@ -176,13 +174,13 @@ export function AboutPage() {
                 <div className="flex items-center justify-center size-12 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors">
                   <Eye className="size-6 text-primary" />
                 </div>
-                <CardTitle className="text-lg">User Privacy</CardTitle>
+                <CardTitle className="text-lg">Fast & Reliable</CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription className="text-muted-foreground leading-relaxed">
-                  Your data belongs to you, always. We practice minimal data
-                  collection, never sell user information, and provide full
-                  transparency about what we store and why.
+                  Load-balanced nodes and smart routing ensure you always get the
+                  fastest connection. Our global server infrastructure delivers
+                  consistent, low-latency performance.
                 </CardDescription>
               </CardContent>
             </Card>
@@ -197,9 +195,9 @@ export function AboutPage() {
               </CardHeader>
               <CardContent>
                 <CardDescription className="text-muted-foreground leading-relaxed">
-                  We are open about our practices and policies. From our security
-                  audits to our incident response, we believe trust is earned
-                  through honesty and accountability.
+                  We are open about our practices and policies. From our server
+                  status to our pricing, we believe trust is earned through
+                  honesty and accountability.
                 </CardDescription>
               </CardContent>
             </Card>
@@ -215,7 +213,7 @@ export function AboutPage() {
               Technology
             </h2>
             <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
-              Built on a foundation of modern, secure architecture
+              Built on Clash-based infrastructure for reliable proxy access
             </p>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -226,17 +224,17 @@ export function AboutPage() {
                     <Cpu className="size-5 text-primary" />
                   </div>
                   <h3 className="text-lg font-semibold text-foreground">
-                    Infrastructure
+                    Clash-Based Infrastructure
                   </h3>
                 </div>
                 <p className="text-muted-foreground leading-relaxed">
-                  CoreX runs on a distributed, zero-trust architecture with
-                  end-to-end encryption for all data in transit and at rest. Our
-                  microservices are containerized and deployed across multiple
-                  regions for maximum availability and fault tolerance.
+                  CoreX is built on Clash, the industry-standard proxy platform.
+                  Our infrastructure supports multiple protocols including VLESS,
+                  VMess, Trojan, and Shadowsocks, with load-balanced subgroups
+                  across global server locations for reliable connectivity.
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {['Zero-Trust', 'E2E Encryption', 'Multi-Region', '99.99% Uptime'].map(
+                  {['Clash Core', 'Multi-Protocol', 'Load Balancing', '99.9% Uptime'].map(
                     (tag) => (
                       <Badge
                         key={tag}
@@ -258,17 +256,17 @@ export function AboutPage() {
                     <Code2 className="size-5 text-primary" />
                   </div>
                   <h3 className="text-lg font-semibold text-foreground">
-                    Security Architecture
+                    Multi-Protocol Support
                   </h3>
                 </div>
                 <p className="text-muted-foreground leading-relaxed">
-                  Our security stack includes real-time threat detection,
-                  automated vulnerability scanning, and AI-powered anomaly
-                  detection. Every API request is authenticated and rate-limited,
-                  with comprehensive audit logging for compliance readiness.
+                  Support for all major proxy protocols including VLESS, VMess,
+                  Trojan, Shadowsocks, and WireGuard. Smart routing with
+                  load-balanced subgroups ensures you always connect to the
+                  fastest available node automatically.
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {['Threat Detection', 'AI Monitoring', 'SOC 2', 'Audit Logs'].map(
+                  {['VLESS', 'VMess', 'Trojan', 'WireGuard'].map(
                     (tag) => (
                       <Badge
                         key={tag}
@@ -304,14 +302,14 @@ export function AboutPage() {
               </div>
               <div className="space-y-3">
                 <h3 className="text-lg font-semibold text-foreground">
-                  Security Experts & Engineers
+                  Proxy & Network Engineers
                 </h3>
                 <p className="text-muted-foreground leading-relaxed">
-                  Our team of security experts, distributed systems engineers,
-                  and privacy advocates brings decades of combined experience
-                  from leading cybersecurity firms and enterprise technology
-                  companies. We are united by a shared passion for making the
-                  digital world safer for everyone.
+                  Our team of network engineers, proxy infrastructure specialists,
+                  and privacy advocates brings deep experience from leading
+                  network and security companies. We are united by a shared
+                  passion for making the internet faster and more private for
+                  everyone.
                 </p>
               </div>
             </CardContent>
@@ -323,11 +321,11 @@ export function AboutPage() {
           <div className="rounded-2xl bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/10 p-8 sm:p-12 text-center">
             <Lock className="size-8 text-primary mx-auto mb-4" />
             <h2 className="text-2xl sm:text-3xl font-bold text-foreground">
-              Ready to secure your workspace?
+              Ready to browse privately?
             </h2>
             <p className="mt-3 text-muted-foreground max-w-lg mx-auto">
-              Join thousands of organizations that trust CoreX for their
-              enterprise security needs.
+              Join thousands of users who trust CoreX for fast, secure proxy
+              access.
             </p>
             <Button
               size="lg"

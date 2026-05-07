@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
@@ -135,9 +136,31 @@ export function AdminSubscriptions() {
   const [deleteItem, setDeleteItem] = useState<RecycleItem | null>(null)
   const [deleteOpen, setDeleteOpen] = useState(false)
 
+  // Bulk select for recycle bin
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkRestoreOpen, setBulkRestoreOpen] = useState(false)
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const toggleSelectAll = (ids: string[]) => {
+    setSelectedIds(prev => {
+      if (prev.size === ids.length) return new Set()
+      return new Set(ids)
+    })
+  }
+
   // Filter subscriptions based on tab
   const activeSubs = subscriptions.filter((s) => s.status === 'active' || s.status === 'renewable')
   const allSubs = subscriptions
+  const recycleIds = recycleBin.map((r) => r.id)
 
   const handleViewDetails = (sub: Subscription) => {
     setViewSub(sub)
@@ -227,9 +250,47 @@ export function AdminSubscriptions() {
   const handlePermanentDelete = () => {
     if (deleteItem) {
       setRecycleBin((prev) => prev.filter((r) => r.id !== deleteItem.id))
+      setSelectedIds((prev) => {
+        const next = new Set(prev)
+        next.delete(deleteItem.id)
+        return next
+      })
       toast.success(`Subscription ${deleteItem.subscriptionName} permanently deleted`)
       setDeleteOpen(false)
     }
+  }
+
+  const handleBulkRestore = () => {
+    const items = recycleBin.filter((r) => selectedIds.has(r.id))
+    const restoredSubs: Subscription[] = items.map((item) => ({
+      id: item.subscriptionId,
+      userId: item.userId,
+      userName: item.userName,
+      name: item.subscriptionName,
+      plan: item.plan,
+      status: 'active' as SubStatus,
+      startDate: new Date().toISOString().split('T')[0],
+      expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .split('T')[0],
+      price: item.price,
+      bandwidthUsed: 0,
+      bandwidthLimit: 100,
+      deepLink: `corex://configure/${item.subscriptionId}`,
+    }))
+    setSubscriptions((prev) => [...prev, ...restoredSubs])
+    setRecycleBin((prev) => prev.filter((r) => !selectedIds.has(r.id)))
+    toast.success(`${items.length} subscription(s) restored`)
+    setSelectedIds(new Set())
+    setBulkRestoreOpen(false)
+  }
+
+  const handleBulkDelete = () => {
+    const count = selectedIds.size
+    setRecycleBin((prev) => prev.filter((r) => !selectedIds.has(r.id)))
+    toast.success(`${count} subscription(s) permanently deleted`)
+    setSelectedIds(new Set())
+    setBulkDeleteOpen(false)
   }
 
   const isPastDeadline = (deadline: string) => {
@@ -337,7 +398,7 @@ export function AdminSubscriptions() {
       </div>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setSelectedIds(new Set()) }}>
         <TabsList>
           <TabsTrigger value="active">
             Active
@@ -395,10 +456,47 @@ export function AdminSubscriptions() {
               </div>
             </CardHeader>
             <CardContent className="p-0">
+              {/* Bulk Action Bar */}
+              {selectedIds.size > 0 && (
+                <div className="flex items-center gap-3 p-3 bg-muted/50 border-b">
+                  <span className="text-sm font-medium">{selectedIds.size} selected</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setBulkRestoreOpen(true)}
+                    className="gap-1 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10"
+                  >
+                    <RotateCcw className="size-3.5" />
+                    Restore Selected
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setBulkDeleteOpen(true)}
+                    className="gap-1 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                  >
+                    <Trash2 className="size-3.5" />
+                    Delete Selected
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedIds(new Set())}
+                  >
+                    Clear selection
+                  </Button>
+                </div>
+              )}
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-12">
+                        <Checkbox
+                          checked={selectedIds.size === recycleIds.length && recycleIds.length > 0}
+                          onCheckedChange={() => toggleSelectAll(recycleIds)}
+                        />
+                      </TableHead>
                       <TableHead>Subscription Name</TableHead>
                       <TableHead>User</TableHead>
                       <TableHead>Deleted At</TableHead>
@@ -410,7 +508,7 @@ export function AdminSubscriptions() {
                   <TableBody>
                     {recycleBin.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                           No deleted subscriptions in the recycle bin
                         </TableCell>
                       </TableRow>
@@ -419,6 +517,12 @@ export function AdminSubscriptions() {
                         const pastDeadline = isPastDeadline(item.restoreDeadline)
                         return (
                           <TableRow key={item.id} className={pastDeadline ? 'opacity-60' : ''}>
+                            <TableCell>
+                              <Checkbox
+                                checked={selectedIds.has(item.id)}
+                                onCheckedChange={() => toggleSelect(item.id)}
+                              />
+                            </TableCell>
                             <TableCell className="font-medium">{item.subscriptionName}</TableCell>
                             <TableCell>{item.userName}</TableCell>
                             <TableCell className="text-muted-foreground text-sm">{item.deletedAt}</TableCell>
@@ -638,6 +742,44 @@ export function AdminSubscriptions() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handlePermanentDelete} className="bg-red-600 hover:bg-red-700">
               Permanently Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk Restore Confirmation */}
+      <AlertDialog open={bulkRestoreOpen} onOpenChange={setBulkRestoreOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Restore Selected Subscriptions</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to restore <strong>{selectedIds.size}</strong> subscription(s)?
+              They will be reactivated for their respective users.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleBulkRestore} className="bg-emerald-600 hover:bg-emerald-700">
+              Restore Selected
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk Delete Confirmation */}
+      <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Permanently Delete Selected</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete{' '}
+              <strong>{selectedIds.size}</strong> subscription(s) and remove them from the recycle bin.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleBulkDelete} className="bg-red-600 hover:bg-red-700">
+              Permanently Delete Selected
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

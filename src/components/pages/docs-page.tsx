@@ -46,30 +46,30 @@ const docSections: DocSection[] = [
       {
         id: 'gs-1',
         title: 'Welcome to CoreX',
-        description: 'Learn what CoreX is and how it can protect your digital life.',
+        description: 'Learn what CoreX is and how it powers your private browsing.',
         content:
-          'CoreX is a comprehensive security platform designed to safeguard your devices, data, and digital identity. With enterprise-grade encryption and real-time threat monitoring, CoreX provides peace of mind in an increasingly connected world. Our platform offers device management, secure browsing, identity protection, and much more—all from a single dashboard.',
+          'CoreX is a Clash-based proxy app for Android that delivers blazing-fast, secure internet access. With support for multiple protocols including VLESS, VMess, Trojan, and Shadowsocks, CoreX provides load-balanced proxy connections through our global server network. Browse privately, bypass restrictions, and enjoy seamless connectivity — all from a single app.',
       },
       {
         id: 'gs-2',
         title: 'Setting Up Your Account',
-        description: 'Create your CoreX account and configure your initial settings.',
+        description: 'Create your CoreX account and configure your proxy subscription.',
         content:
-          'To get started with CoreX, visit our sign-up page and create an account using your email or social login (Google/Telegram). After verification, you\'ll be guided through the initial setup wizard which helps you configure your security preferences, enable two-factor authentication, and connect your first device. The entire process takes less than 5 minutes.',
+          'To get started with CoreX, visit our sign-up page and create an account using Google or Telegram login. After signing in, you\'ll be guided through the subscription setup where you can choose a plan, configure your proxy protocols, and connect your first device. The entire process takes less than 5 minutes.',
       },
       {
         id: 'gs-3',
         title: 'System Requirements',
         description: 'Check the minimum requirements for running CoreX.',
         content:
-          'CoreX supports Android 8.0 and above, iOS 14.0 and above, Windows 10+, macOS 11+, and major Linux distributions. A stable internet connection is required for real-time protection features. We recommend at least 2GB of free storage for full functionality including offline threat databases.',
+          'CoreX supports Android 8.0 and above. A stable internet connection is required for proxy connectivity. We recommend at least 100MB of free storage for the app and proxy configuration files. For the best experience, a Wi-Fi or 4G/5G connection is recommended.',
       },
       {
         id: 'gs-4',
         title: 'Downloading & Installing CoreX',
         description: 'Step-by-step guide to download and install CoreX on your device.',
         content:
-          'Visit the Download page in your dashboard to get the latest version of CoreX. For Android devices, download the APK and enable installation from unknown sources. For desktop platforms, run the installer and follow the on-screen instructions. After installation, launch the app and sign in with your CoreX credentials to activate protection.',
+          'Visit the Download page in your dashboard to get the latest version of CoreX. Download the APK and enable installation from unknown sources in your Android settings. After installation, launch the app and sign in with your CoreX account to activate your proxy subscription.',
       },
     ],
   },
@@ -87,17 +87,17 @@ const docSections: DocSection[] = [
       },
       {
         id: 'aa-2',
-        title: 'Two-Factor Authentication',
-        description: 'Enable 2FA for enhanced account security.',
+        title: 'Authentication Methods',
+        description: 'Understanding CoreX login via Google and Telegram.',
         content:
-          'We strongly recommend enabling two-factor authentication (2FA) for your CoreX account. Go to Settings → Security → Two-Factor Authentication and follow the setup wizard. CoreX supports TOTP authenticator apps (Google Authenticator, Authy) and SMS verification as a backup method. Once enabled, you\'ll need both your password and a verification code to sign in.',
+          'CoreX uses Google and Telegram as the only authentication methods — no passwords required. This approach eliminates phishing vectors and password reuse risks. Go to Settings → Connected Accounts to manage your linked accounts. You can connect both Google and Telegram and set one as your primary sign-in method.',
       },
       {
         id: 'aa-3',
-        title: 'Password Reset & Recovery',
-        description: 'Recover your account if you forget your password.',
+        title: 'Account Recovery',
+        description: 'Recover your account if you lose access to your login method.',
         content:
-          'If you forget your password, click "Forgot Password" on the login screen. Enter your registered email address and we\'ll send a secure reset link valid for 30 minutes. If you\'ve also lost access to your email, contact our support team with your account verification details for manual recovery.',
+          'If you lose access to your Google or Telegram account, contact our support team with your account verification details for manual recovery. We recommend linking both Google and Telegram to your CoreX account so you always have a backup login method available.',
       },
       {
         id: 'aa-4',
@@ -116,9 +116,9 @@ const docSections: DocSection[] = [
       {
         id: 'sub-1',
         title: 'Subscription Plans Overview',
-        description: 'Compare CoreX Free, Pro, and Enterprise plans.',
+        description: 'Compare CoreX proxy subscription plans.',
         content:
-          'CoreX offers three tiers: Free (basic protection for 1 device), Pro ($9.99/mo — up to 5 devices, real-time monitoring, priority support), and Enterprise (custom pricing — unlimited devices, dedicated account manager, SLA guarantees). All paid plans include a 14-day free trial. Upgrade or downgrade at any time from your dashboard.',
+          'CoreX offers multiple subscription tiers with varying proxy bandwidth, device limits, and protocol access. All plans include access to our global proxy network with load-balanced nodes. Browse available plans from your dashboard, choose the one that fits your needs, and start browsing privately within minutes.',
       },
       {
         id: 'sub-2',
@@ -144,23 +144,23 @@ const docSections: DocSection[] = [
       {
         id: 'dm-1',
         title: 'Adding a New Device',
-        description: 'Install CoreX on additional devices and link them to your account.',
+        description: 'Install CoreX on additional Android devices and bind them to your account.',
         content:
-          'Download CoreX on your new device from the Download page. During setup, sign in with your existing CoreX account. The device will automatically appear in your Dashboard → Active Devices list. Each subscription plan has a device limit — Free (1), Pro (5), Enterprise (unlimited).',
+          'Download CoreX on your new Android device from the Download page. During setup, sign in with your existing CoreX account. The device will be bound to your subscription automatically. Each subscription plan has a device binding limit — check your plan details for the specific number.',
       },
       {
         id: 'dm-2',
         title: 'Removing a Device',
-        description: 'Unlink a device from your CoreX account.',
+        description: 'Unbind a device from your CoreX account.',
         content:
-          'Go to Dashboard → Active Devices, find the device you want to remove, and click "Remove." This will unlink the device from your account and disable CoreX protection on it. The device can be re-added at any time by signing in again. Removing a device frees up a slot if you\'re on a device-limited plan.',
+          'Go to Dashboard → Active Devices, find the device you want to remove, and click "Remove." This will unbind the device from your subscription and disable proxy access on it. The device can be re-added at any time by signing in again. Removing a device frees up a binding slot if you\'re on a device-limited plan.',
       },
       {
         id: 'dm-3',
         title: 'Device Status & Health',
-        description: 'Monitor the protection status of your connected devices.',
+        description: 'Monitor the proxy status of your connected devices.',
         content:
-          'Each device in your dashboard shows a real-time status indicator: Green (Protected), Yellow (Attention Needed), or Red (At Risk). Click on any device to see detailed health metrics including last scan time, threat detection count, and system compatibility status.',
+          'Each device in your dashboard shows a real-time status indicator: Green (Connected), Yellow (Attention Needed), or Red (Disconnected). Click on any device to see detailed connection metrics including current protocol, bandwidth usage, and server node information.',
       },
     ],
   },
@@ -227,31 +227,31 @@ const docSections: DocSection[] = [
     articles: [
       {
         id: 'sec-1',
-        title: 'CoreX Security Architecture',
-        description: 'How CoreX protects your data and privacy.',
+        title: 'CoreX Proxy Architecture',
+        description: 'How CoreX routes and secures your proxy traffic.',
         content:
-          'CoreX uses AES-256 encryption for data at rest and TLS 1.3 for data in transit. Our zero-knowledge architecture means we cannot access your encrypted data. Security audits are conducted quarterly by independent third-party firms. Our infrastructure runs on SOC 2 Type II certified data centers with 99.99% uptime guarantees.',
+          'CoreX is built on the Clash proxy core, supporting multiple protocols including VLESS, VMess, Trojan, Shadowsocks, and WireGuard. All proxy connections use AES-256 encryption. Our infrastructure features load-balanced subgroups with automatic failover, ensuring 99.9% uptime. DNS and WebRTC leak protection is enabled by default on all connections.',
       },
       {
         id: 'sec-2',
-        title: 'Real-Time Threat Detection',
-        description: 'How CoreX identifies and blocks threats in real time.',
+        title: 'Protocol Selection & Routing',
+        description: 'How to choose the right protocol and configure smart routing.',
         content:
-          'CoreX employs a multi-layered threat detection system: signature-based scanning for known threats, heuristic analysis for zero-day detection, and cloud-based machine learning models that update every 15 minutes. When a threat is detected, CoreX automatically quarantines the affected file and alerts you through push notification and dashboard alert.',
+          'CoreX supports VLESS, VMess, Trojan, Shadowsocks, and WireGuard protocols. Each protocol has different strengths: VLESS for speed, VMess for reliability, Trojan for TLS camouflage, Shadowsocks for compatibility, and WireGuard for modern performance. Use the load-balanced subgroup feature to let CoreX automatically select the best protocol and node for your current network conditions.',
       },
       {
         id: 'sec-3',
-        title: 'Reporting a Security Incident',
-        description: 'What to do if you suspect a security breach.',
+        title: 'Troubleshooting Connection Issues',
+        description: 'What to do if your proxy connection drops or fails.',
         content:
-          'If you suspect unauthorized access to your account or a security vulnerability, immediately: 1) Change your password, 2) Enable 2FA if not already active, 3) Report the incident at security@corex.app. Our security team responds within 2 hours for critical issues. We also maintain a bug bounty program for responsible vulnerability disclosure.',
+          'If you experience connection issues: 1) Switch to a different proxy protocol in the app settings, 2) Try a different server node or subgroup, 3) Check your internet connection, 4) Restart the CoreX app. If issues persist, contact support at support@corex.app. Our team monitors server health 24/7 and resolves infrastructure issues promptly.',
       },
       {
         id: 'sec-4',
-        title: 'Data Privacy & GDPR',
-        description: 'Your rights regarding personal data under privacy regulations.',
+        title: 'Data Privacy & No-Log Policy',
+        description: 'How CoreX protects your browsing privacy.',
         content:
-          'CoreX is fully compliant with GDPR, CCPA, and other major privacy regulations. You have the right to access, export, correct, or delete your personal data at any time from Settings → Privacy. We never sell your data to third parties. Our complete privacy policy is available at corex.app/privacy.',
+          'CoreX operates a strict no-log policy — we never record your browsing activity, DNS queries, or connection destinations. Our servers only store minimal connection metadata required for load balancing and billing. You have the right to access, export, or delete your account data at any time from Settings → Privacy. Our complete privacy policy is available at corex.app/privacy.',
       },
     ],
   },

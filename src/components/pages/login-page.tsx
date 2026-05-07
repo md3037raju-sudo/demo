@@ -1,9 +1,18 @@
 'use client'
 
-import { Shield, ArrowLeft, KeyRound } from 'lucide-react'
+import { useState } from 'react'
+import { Shield, ArrowLeft, KeyRound, UserCog, User } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { useNavigationStore } from '@/lib/navigation-store'
 import { useAuthStore } from '@/lib/auth-store'
 
@@ -41,17 +50,34 @@ function TelegramIcon() {
 export function LoginPage() {
   const navigate = useNavigationStore((s) => s.navigate)
   const login = useAuthStore((s) => s.login)
-
   const loginAsAdmin = useAuthStore((s) => s.loginAsAdmin)
+  const loginAsUser = useAuthStore((s) => s.loginAsUser)
+
+  const [adminDialogOpen, setAdminDialogOpen] = useState(false)
 
   const handleLogin = (provider: 'google' | 'telegram') => {
-    login(provider)
-    navigate('dashboard')
+    const role = login(provider)
+    if (role === 'admin') {
+      setAdminDialogOpen(true)
+    } else {
+      navigate('dashboard')
+    }
   }
 
-  const handleAdminLogin = () => {
+  const handleAdminAccess = () => {
     loginAsAdmin()
+    setAdminDialogOpen(true)
+  }
+
+  const handleLoginAsAdmin = () => {
+    setAdminDialogOpen(false)
     navigate('admin')
+  }
+
+  const handleLoginAsUser = () => {
+    loginAsUser()
+    setAdminDialogOpen(false)
+    navigate('dashboard')
   }
 
   return (
@@ -136,7 +162,7 @@ export function LoginPage() {
               variant="ghost"
               size="sm"
               className="gap-2 text-muted-foreground hover:text-primary"
-              onClick={handleAdminLogin}
+              onClick={handleAdminAccess}
             >
               <KeyRound className="size-3.5" />
               Admin Access
@@ -144,6 +170,70 @@ export function LoginPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Admin Detection Dialog */}
+      <Dialog open={adminDialogOpen} onOpenChange={setAdminDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <div className="flex items-center justify-center size-8 rounded-lg bg-amber-500/10">
+                <Shield className="size-4 text-amber-400" />
+              </div>
+              Admin Account Detected
+            </DialogTitle>
+            <DialogDescription>
+              This account has admin privileges. How would you like to proceed?
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-3 py-2">
+            <Button
+              variant="outline"
+              className="h-auto py-4 px-4 justify-start gap-4 border-border/50 hover:bg-amber-500/10 hover:border-amber-500/30 transition-colors"
+              onClick={handleLoginAsAdmin}
+            >
+              <div className="flex items-center justify-center size-10 rounded-lg bg-amber-500/10 shrink-0">
+                <UserCog className="size-5 text-amber-400" />
+              </div>
+              <div className="text-left">
+                <div className="font-semibold text-sm">Login as Admin</div>
+                <div className="text-xs text-muted-foreground">
+                  Access the admin dashboard and management tools
+                </div>
+              </div>
+            </Button>
+
+            <Button
+              variant="outline"
+              className="h-auto py-4 px-4 justify-start gap-4 border-border/50 hover:bg-emerald-500/10 hover:border-emerald-500/30 transition-colors"
+              onClick={handleLoginAsUser}
+            >
+              <div className="flex items-center justify-center size-10 rounded-lg bg-emerald-500/10 shrink-0">
+                <User className="size-5 text-emerald-400" />
+              </div>
+              <div className="text-left">
+                <div className="font-semibold text-sm">Login as User</div>
+                <div className="text-xs text-muted-foreground">
+                  Continue to your personal dashboard and subscriptions
+                </div>
+              </div>
+            </Button>
+          </div>
+
+          <DialogFooter className="sm:justify-center">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setAdminDialogOpen(false)
+                useAuthStore.getState().logout()
+              }}
+            >
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Subtle branding at bottom */}
       <p className="mt-8 text-xs text-muted-foreground/60">

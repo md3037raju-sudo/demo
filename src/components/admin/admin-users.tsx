@@ -6,6 +6,8 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
@@ -61,10 +63,30 @@ import {
   Pause,
   CheckCircle,
   UserCog,
+  ArrowUpRight,
+  ArrowDownRight,
+  History,
 } from 'lucide-react'
 
 type UserStatus = 'active' | 'banned' | 'suspended'
 type UserRole = 'user' | 'moderator' | 'admin'
+
+interface BalanceHistoryEntry {
+  id: string
+  date: string
+  type: 'topup' | 'payment' | 'referral' | 'refund'
+  description: string
+  amount: number
+  balanceAfter: number
+}
+
+const mockBalanceHistory: BalanceHistoryEntry[] = [
+  { id: 'bh_001', date: '2025-02-10', type: 'topup', description: 'bKash Top-up', amount: 100.00, balanceAfter: 249.50 },
+  { id: 'bh_002', date: '2025-02-01', type: 'payment', description: 'CoreX Pro - Monthly', amount: -29.99, balanceAfter: 149.50 },
+  { id: 'bh_003', date: '2025-01-15', type: 'referral', description: 'Referral Bonus - Lisa Anderson', amount: 5.00, balanceAfter: 179.49 },
+  { id: 'bh_004', date: '2025-01-01', type: 'payment', description: 'CoreX Pro - Monthly', amount: -29.99, balanceAfter: 174.49 },
+  { id: 'bh_005', date: '2024-12-20', type: 'topup', description: 'Nagad Top-up', amount: 200.00, balanceAfter: 204.48 },
+]
 
 interface User {
   id: string
@@ -109,6 +131,19 @@ function ProviderBadge({ provider }: { provider: string }) {
   return <Badge variant="outline" className="text-xs bg-sky-500/10 text-sky-400 border-sky-500/30">Telegram</Badge>
 }
 
+function BalanceTypeBadge({ type }: { type: BalanceHistoryEntry['type'] }) {
+  switch (type) {
+    case 'topup':
+      return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20">Top-up</Badge>
+    case 'payment':
+      return <Badge className="bg-red-500/20 text-red-400 border-red-500/30 hover:bg-red-500/20">Payment</Badge>
+    case 'referral':
+      return <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 hover:bg-amber-500/20">Referral</Badge>
+    case 'refund':
+      return <Badge className="bg-sky-500/20 text-sky-400 border-sky-500/30 hover:bg-sky-500/20">Refund</Badge>
+  }
+}
+
 export function AdminUsers() {
   const [users, setUsers] = useState<User[]>(mockUsers as unknown as User[])
   const [searchQuery, setSearchQuery] = useState('')
@@ -123,6 +158,7 @@ export function AdminUsers() {
   const [balanceUser, setBalanceUser] = useState<User | null>(null)
   const [balanceOpen, setBalanceOpen] = useState(false)
   const [balanceInput, setBalanceInput] = useState('')
+  const [balanceReason, setBalanceReason] = useState('')
 
   // Ban confirmation
   const [banUser, setBanUser] = useState<User | null>(null)
@@ -136,6 +172,28 @@ export function AdminUsers() {
   const [activateUser, setActivateUser] = useState<User | null>(null)
   const [activateOpen, setActivateOpen] = useState(false)
 
+  // Bulk select
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkBanOpen, setBulkBanOpen] = useState(false)
+  const [bulkSuspendOpen, setBulkSuspendOpen] = useState(false)
+  const [bulkActivateOpen, setBulkActivateOpen] = useState(false)
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const toggleSelectAll = (ids: string[]) => {
+    setSelectedIds(prev => {
+      if (prev.size === ids.length) return new Set()
+      return new Set(ids)
+    })
+  }
+
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
       searchQuery === '' ||
@@ -147,6 +205,8 @@ export function AdminUsers() {
     return matchesSearch && matchesStatus && matchesRole
   })
 
+  const filteredUserIds = filteredUsers.map((u) => u.id)
+
   const handleViewDetails = (user: User) => {
     setViewUser(user)
     setViewOpen(true)
@@ -155,6 +215,7 @@ export function AdminUsers() {
   const handleEditBalance = (user: User) => {
     setBalanceUser(user)
     setBalanceInput(user.balance.toString())
+    setBalanceReason('')
     setBalanceOpen(true)
   }
 
@@ -217,6 +278,42 @@ export function AdminUsers() {
     }
   }
 
+  // Bulk actions
+  const handleBulkBan = () => {
+    const count = selectedIds.size
+    setUsers((prev) =>
+      prev.map((u) => (selectedIds.has(u.id) ? { ...u, status: 'banned' } : u))
+    )
+    toast.success(`${count} user(s) have been banned`)
+    setSelectedIds(new Set())
+    setBulkBanOpen(false)
+  }
+
+  const handleBulkSuspend = () => {
+    const count = selectedIds.size
+    setUsers((prev) =>
+      prev.map((u) => (selectedIds.has(u.id) ? { ...u, status: 'suspended' } : u))
+    )
+    toast.success(`${count} user(s) have been suspended`)
+    setSelectedIds(new Set())
+    setBulkSuspendOpen(false)
+  }
+
+  const handleBulkActivate = () => {
+    const count = selectedIds.size
+    setUsers((prev) =>
+      prev.map((u) => (selectedIds.has(u.id) ? { ...u, status: 'active' } : u))
+    )
+    toast.success(`${count} user(s) have been activated`)
+    setSelectedIds(new Set())
+    setBulkActivateOpen(false)
+  }
+
+  const getPreviousBalance = () => {
+    if (!balanceUser) return 0
+    return mockBalanceHistory.length > 0 ? mockBalanceHistory[0].balanceAfter : balanceUser.balance
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -265,6 +362,47 @@ export function AdminUsers() {
         </CardContent>
       </Card>
 
+      {/* Bulk Action Bar */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border">
+          <span className="text-sm font-medium">{selectedIds.size} selected</span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setBulkBanOpen(true)}
+            className="gap-1 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+          >
+            <Ban className="size-3.5" />
+            Ban Selected
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setBulkSuspendOpen(true)}
+            className="gap-1 text-amber-400 hover:text-amber-300 hover:bg-amber-500/10"
+          >
+            <Pause className="size-3.5" />
+            Suspend Selected
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setBulkActivateOpen(true)}
+            className="gap-1 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10"
+          >
+            <CheckCircle className="size-3.5" />
+            Activate Selected
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSelectedIds(new Set())}
+          >
+            Clear selection
+          </Button>
+        </div>
+      )}
+
       {/* Users Table */}
       <Card>
         <CardHeader className="pb-3">
@@ -280,6 +418,12 @@ export function AdminUsers() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-12">
+                    <Checkbox
+                      checked={selectedIds.size === filteredUserIds.length && filteredUserIds.length > 0}
+                      onCheckedChange={() => toggleSelectAll(filteredUserIds)}
+                    />
+                  </TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Provider</TableHead>
@@ -296,13 +440,19 @@ export function AdminUsers() {
               <TableBody>
                 {filteredUsers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={12} className="text-center py-8 text-muted-foreground">
                       No users found matching your filters
                     </TableCell>
                   </TableRow>
                 ) : (
                   filteredUsers.map((user) => (
                     <TableRow key={user.id}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedIds.has(user.id)}
+                          onCheckedChange={() => toggleSelect(user.id)}
+                        />
+                      </TableCell>
                       <TableCell className="font-medium">{user.name}</TableCell>
                       <TableCell className="text-muted-foreground text-sm">{user.email}</TableCell>
                       <TableCell><ProviderBadge provider={user.provider} /></TableCell>
@@ -384,7 +534,7 @@ export function AdminUsers() {
 
       {/* View Details Dialog */}
       <Dialog open={viewOpen} onOpenChange={setViewOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <UserCog className="size-5" />
@@ -395,7 +545,7 @@ export function AdminUsers() {
             </DialogDescription>
           </DialogHeader>
           {viewUser && (
-            <div className="space-y-4">
+            <div className="space-y-6 overflow-y-auto flex-1">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground uppercase tracking-wider">Name</p>
@@ -442,6 +592,43 @@ export function AdminUsers() {
                   <p className="text-sm">{viewUser.lastActive}</p>
                 </div>
               </div>
+
+              {/* Balance History Section */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 border-t pt-4">
+                  <History className="size-4 text-muted-foreground" />
+                  <h4 className="text-sm font-semibold">Balance History</h4>
+                </div>
+                <div className="overflow-x-auto rounded-lg border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead className="text-right">Amount</TableHead>
+                        <TableHead className="text-right">Balance After</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {mockBalanceHistory.map((entry) => (
+                        <TableRow key={entry.id}>
+                          <TableCell className="text-sm text-muted-foreground">{entry.date}</TableCell>
+                          <TableCell><BalanceTypeBadge type={entry.type} /></TableCell>
+                          <TableCell className="text-sm">{entry.description}</TableCell>
+                          <TableCell className="text-right">
+                            <span className={`flex items-center justify-end gap-1 font-medium ${entry.amount >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                              {entry.amount >= 0 ? <ArrowUpRight className="size-3.5" /> : <ArrowDownRight className="size-3.5" />}
+                              {entry.amount >= 0 ? '+' : ''}{entry.amount.toFixed(2)}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right font-medium">${entry.balanceAfter.toFixed(2)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
             </div>
           )}
         </DialogContent>
@@ -458,10 +645,18 @@ export function AdminUsers() {
           </DialogHeader>
           {balanceUser && (
             <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Current Balance</p>
+                  <p className="text-sm font-semibold text-emerald-400">${balanceUser.balance.toFixed(2)}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Previous Balance</p>
+                  <p className="text-sm font-medium">${getPreviousBalance().toFixed(2)}</p>
+                </div>
+              </div>
               <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">
-                  Current balance: <span className="font-semibold text-foreground">${balanceUser.balance.toFixed(2)}</span>
-                </p>
+                <label className="text-sm font-medium">New Balance</label>
                 <Input
                   type="number"
                   step="0.01"
@@ -469,6 +664,15 @@ export function AdminUsers() {
                   value={balanceInput}
                   onChange={(e) => setBalanceInput(e.target.value)}
                   placeholder="Enter new balance"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Reason for Adjustment</label>
+                <Textarea
+                  value={balanceReason}
+                  onChange={(e) => setBalanceReason(e.target.value)}
+                  placeholder="Enter reason for balance adjustment..."
+                  rows={3}
                 />
               </div>
             </div>
@@ -529,6 +733,63 @@ export function AdminUsers() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleActivateUser} className="bg-emerald-600 hover:bg-emerald-700">
               Activate User
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk Ban Confirmation */}
+      <AlertDialog open={bulkBanOpen} onOpenChange={setBulkBanOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Ban Selected Users</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to ban <strong>{selectedIds.size}</strong> user(s)?
+              They will lose access to their accounts immediately.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleBulkBan} className="bg-red-600 hover:bg-red-700">
+              Ban Selected
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk Suspend Confirmation */}
+      <AlertDialog open={bulkSuspendOpen} onOpenChange={setBulkSuspendOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Suspend Selected Users</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to suspend <strong>{selectedIds.size}</strong> user(s)?
+              Their accounts will be temporarily disabled.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleBulkSuspend} className="bg-amber-600 hover:bg-amber-700">
+              Suspend Selected
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk Activate Confirmation */}
+      <AlertDialog open={bulkActivateOpen} onOpenChange={setBulkActivateOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Activate Selected Users</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to reactivate <strong>{selectedIds.size}</strong> user(s)?
+              They will regain full access to their accounts.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleBulkActivate} className="bg-emerald-600 hover:bg-emerald-700">
+              Activate Selected
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

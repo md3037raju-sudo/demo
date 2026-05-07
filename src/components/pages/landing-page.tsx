@@ -179,23 +179,23 @@ export function LandingPage() {
 
             <Badge variant="secondary" className="mb-6 gap-1.5 px-3 py-1 text-sm">
               <ShieldCheck className="size-3.5" />
-              Security-First Platform
+              Clash-Powered VPN
             </Badge>
 
             <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
-              Enterprise Security,{' '}
+              Fast & Secure Proxy,{' '}
               <span className="text-primary">Simplified</span>
             </h1>
 
             <p className="mt-6 max-w-2xl text-lg text-muted-foreground sm:text-xl">
-              CoreX delivers military-grade encryption, seamless device
-              management, and real-time monitoring — all in one unified
-              platform built for modern businesses.
+              CoreX delivers blazing-fast proxy servers with military-grade
+              encryption. Browse privately with our Clash-powered app — multiple
+              protocols, load-balanced nodes, and seamless connectivity.
             </p>
 
             <div className="mt-10 flex flex-col gap-4 sm:flex-row">
               <Button size="lg" onClick={handleGetStarted} className="gap-2">
-                Get Started
+                Get CoreX
                 <ArrowRight className="size-4" />
               </Button>
               <Button
@@ -221,7 +221,7 @@ export function LandingPage() {
               </div>
               <div className="flex items-center gap-1.5">
                 <CheckCircle2 className="size-4 text-primary" />
-                SOC 2 Compliant
+                Works with Clash
               </div>
             </div>
           </div>
@@ -237,39 +237,39 @@ export function LandingPage() {
             </Badge>
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
               Everything You Need to{' '}
-              <span className="text-primary">Stay Secure</span>
+              <span className="text-primary">Browse Privately</span>
             </h2>
             <p className="mt-4 text-muted-foreground text-lg max-w-2xl mx-auto">
-              From encryption to device management, CoreX provides a
-              comprehensive security suite for your business.
+              From multi-protocol support to load-balanced nodes, CoreX
+              provides everything you need for fast, private browsing.
             </p>
           </div>
 
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {[
               {
-                icon: Lock,
-                title: 'Military-Grade Encryption',
+                icon: Globe,
+                title: 'Multi-Protocol Support',
                 description:
-                  'End-to-end encryption for all data at rest and in transit. Your information stays protected with 256-bit AES standards.',
+                  'VLESS, VMess, Trojan, Shadowsocks, WireGuard, and more. All major protocols supported with full auth configuration.',
               },
               {
-                icon: Smartphone,
-                title: 'Device Management',
+                icon: Activity,
+                title: 'Load-Balanced Nodes',
                 description:
-                  'Bind and manage devices securely. Control access, enforce policies, and revoke devices instantly from a single dashboard.',
+                  'Smart proxy selection with load-balanced subgroups. Always connect to the fastest available server automatically.',
               },
               {
                 icon: Fingerprint,
                 title: 'Seamless Authentication',
                 description:
-                  'Secure login via Google & Telegram only. No passwords to remember, no phishing vectors — just fast, reliable auth.',
+                  'Secure login via Google & Telegram only. No passwords to remember, no phishing vectors.',
               },
               {
                 icon: Activity,
                 title: 'Real-time Monitoring',
                 description:
-                  'Track subscriptions, device activity, and security events in real-time. Get alerts before threats become incidents.',
+                  'Track your subscription status, bandwidth usage, and connected devices in real-time.',
               },
             ].map((feature) => (
               <Card
@@ -296,15 +296,15 @@ export function LandingPage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-20 sm:py-28">
           <div className="text-center mb-14">
             <Badge variant="outline" className="mb-4">
-              Security
+              Infrastructure
             </Badge>
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
               Built on a Foundation of{' '}
-              <span className="text-primary">Trust</span>
+              <span className="text-primary">Reliability</span>
             </h2>
             <p className="mt-4 text-muted-foreground text-lg max-w-2xl mx-auto">
-              Industry-leading security standards and certifications protect
-              your data at every layer.
+              Robust infrastructure ensures your proxy connections stay fast,
+              secure, and always available.
             </p>
           </div>
 
@@ -315,21 +315,21 @@ export function LandingPage() {
                 badge: 'Encryption',
                 title: '256-bit Encryption',
                 description:
-                  'AES-256 encryption for all stored data and TLS 1.3 for data in transit. The same standard used by governments worldwide.',
+                  'AES-256 encryption on all proxy connections. Your traffic stays private and secure.',
               },
               {
                 icon: Eye,
                 badge: 'Privacy',
                 title: 'Zero Data Leaks',
                 description:
-                  'A perfect track record with zero data breaches since inception. Your data stays yours — we never sell or share information.',
+                  'No DNS leaks, no WebRTC leaks. Your real IP stays hidden — guaranteed.',
               },
               {
                 icon: ShieldCheck,
-                badge: 'Compliance',
-                title: 'SOC 2 Compliant',
+                badge: 'Reliability',
+                title: '99.9% Uptime',
                 description:
-                  'Independently audited and SOC 2 Type II certified. We meet the highest standards for security, availability, and confidentiality.',
+                  'Redundant server infrastructure ensures you\'re always connected. Auto-failover to backup nodes.',
               },
             ].map((item) => (
               <Card
@@ -369,15 +369,15 @@ export function LandingPage() {
               <Zap className="size-8" />
             </div>
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-              Ready to Secure Your Business?
+              Ready to Browse Privately?
             </h2>
             <p className="mt-4 text-muted-foreground text-lg max-w-xl">
-              Join thousands of businesses that trust CoreX to protect their
-              most sensitive data. Get started in minutes.
+              Join thousands of users who trust CoreX for fast, secure proxy
+              access. Get started in minutes.
             </p>
             <div className="mt-8 flex flex-col gap-4 sm:flex-row">
               <Button size="lg" onClick={handleGetStarted} className="gap-2">
-                Get Started
+                Get CoreX
                 <ArrowRight className="size-4" />
               </Button>
               <Button
@@ -405,8 +405,8 @@ export function LandingPage() {
                 </span>
               </div>
               <p className="max-w-xs text-sm text-muted-foreground">
-                Enterprise-grade security made simple. Protect your business
-                with confidence.
+                Fast, secure proxy subscriptions for the CoreX app. Browse
+                privately with confidence.
               </p>
             </div>
 

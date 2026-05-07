@@ -164,6 +164,70 @@ export const mockUsers = [
   { id: 'usr_cx_007', name: 'Raj Patel', email: 'raj.p@telegram', provider: 'telegram', role: 'user' as const, balance: 0, status: 'suspended' as const, joinedAt: '2025-01-20', subscriptions: 0, devices: 0, lastActive: '2025-01-25' },
 ]
 
+export type ProxyProtocol = 'vless' | 'vmess' | 'trojan' | 'ss' | 'ssr' | 'wireguard' | 'socks5' | 'http'
+
+export interface ProxyEntry {
+  id: string
+  protocol: ProxyProtocol
+  address: string
+  port: number
+  // Auth fields
+  uuid?: string
+  password?: string
+  username?: string
+  // VLESS/VMess specific
+  flow?: string
+  network?: string
+  tls?: boolean
+  sni?: string
+  alpn?: string
+  cipher?: string
+  alterId?: number
+  skipCertVerify?: boolean
+  // Reality (VLESS)
+  realityPublicKey?: string
+  realityShortId?: string
+  clientFingerprint?: string
+  // gRPC opts
+  grpcService?: string
+  // WebSocket opts
+  wsPath?: string
+  wsHost?: string
+  // SS specific
+  udp?: boolean
+  plugin?: string
+  pluginOptsMode?: string
+  pluginOptsHost?: string
+  // SSR specific
+  ssrProtocol?: string
+  obfs?: string
+  obfsParam?: string
+  // WireGuard specific
+  privateKey?: string
+  publicKey?: string
+  presharedKey?: string
+  dns?: string
+  mtu?: number
+  // Status
+  status: 'online' | 'offline' | 'unknown' | 'degraded'
+  latency: number | null
+}
+
+export const mockProxies: ProxyEntry[] = [
+  { id: 'px_001', protocol: 'vless', address: 'node1.dhaka.corex.io', port: 443, uuid: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890', network: 'ws', tls: true, sni: 'corex.io', wsPath: '/ws', status: 'online', latency: 45 },
+  { id: 'px_002', protocol: 'vmess', address: 'node2.sg.corex.io', port: 8080, uuid: 'f6e5d4c3-b2a1-0987-6543-21fedcba0987', network: 'grpc', tls: true, cipher: 'auto', grpcService: 'grpc-corex', status: 'online', latency: 32 },
+  { id: 'px_003', protocol: 'trojan', address: 'node3.jp.corex.io', port: 443, password: 'trojan-pass-123', network: 'tcp', tls: true, sni: 'jp.corex.io', status: 'online', latency: 68 },
+  { id: 'px_004', protocol: 'ss', address: 'node4.hk.corex.io', port: 8388, password: 'ss-password-456', cipher: 'chacha20-ietf-poly1305', status: 'degraded', latency: 120 },
+  { id: 'px_005', protocol: 'vless', address: 'node5.dhaka.corex.io', port: 443, uuid: 'reality-uuid-1234', flow: 'xtls-rprx-vision', network: 'tcp', tls: true, sni: 'corex.io', realityPublicKey: 'abc123publickey', realityShortId: 'abcd1234', clientFingerprint: 'chrome', status: 'online', latency: 28 },
+  { id: 'px_006', protocol: 'ssr', address: 'node6.kolkata.corex.io', port: 9100, password: 'ssr-key-789', cipher: 'aes-256-cfb', ssrProtocol: 'auth_aes128_sha1', obfs: 'tls1.2_ticket_auth', obfsParam: 'corex.io', status: 'online', latency: 55 },
+  { id: 'px_007', protocol: 'wireguard', address: 'wg1.corex.io', port: 51820, privateKey: 'WG-privkey-xxxx', publicKey: 'WG-pubkey-xxxx', presharedKey: 'WG-psk-xxxx', dns: '1.1.1.1', mtu: 1280, status: 'online', latency: 22 },
+  { id: 'px_008', protocol: 'socks5', address: 'proxy8.corex.io', port: 1080, username: 'socksuser', password: 'sockspass', tls: false, status: 'offline', latency: null },
+  { id: 'px_009', protocol: 'http', address: 'proxy9.corex.io', port: 8080, username: 'httpuser', password: 'httppass', tls: false, status: 'unknown', latency: null },
+  { id: 'px_010', protocol: 'vmess', address: 'node10.us.corex.io', port: 443, uuid: 'vmess-us-uuid-5678', network: 'ws', tls: true, sni: 'us.corex.io', cipher: 'aes-128-gcm', wsPath: '/v2ray', wsHost: 'us.corex.io', status: 'online', latency: 95 },
+  { id: 'px_011', protocol: 'trojan', address: 'node11.de.corex.io', port: 443, password: 'trojan-de-pass', network: 'grpc', tls: true, sni: 'de.corex.io', grpcService: 'trojan-grpc', status: 'online', latency: 110 },
+  { id: 'px_012', protocol: 'ss', address: 'node12.uk.corex.io', port: 8388, password: 'ss-uk-pass', cipher: 'aes-256-gcm', udp: true, status: 'online', latency: 88 },
+]
+
 export const mockProxyPresets = [
   {
     id: 'preset_001',
@@ -171,9 +235,9 @@ export const mockProxyPresets = [
     description: 'Optimized for BD users with local nodes',
     isActive: true,
     subgroups: [
-      { id: 'sg_001', name: 'Dhaka', proxyCount: 7, status: 'healthy' as const, image: null, imageWidth: 200, imageHeight: 100 },
-      { id: 'sg_002', name: 'Sylhet', proxyCount: 4, status: 'healthy' as const, image: null, imageWidth: 200, imageHeight: 100 },
-      { id: 'sg_003', name: 'Chittagong', proxyCount: 5, status: 'degraded' as const, image: null, imageWidth: 200, imageHeight: 100 },
+      { id: 'sg_001', name: 'Dhaka', proxyCount: 3, status: 'healthy' as const, image: null, imageWidth: 200, imageHeight: 100, proxyIds: ['px_001', 'px_005'] },
+      { id: 'sg_002', name: 'Sylhet', proxyCount: 2, status: 'healthy' as const, image: null, imageWidth: 200, imageHeight: 100, proxyIds: ['px_006'] },
+      { id: 'sg_003', name: 'Chittagong', proxyCount: 2, status: 'degraded' as const, image: null, imageWidth: 200, imageHeight: 100, proxyIds: [] },
     ],
     assignedUsers: 156,
   },
@@ -183,9 +247,9 @@ export const mockProxyPresets = [
     description: 'Wide coverage across APAC region',
     isActive: true,
     subgroups: [
-      { id: 'sg_004', name: 'Singapore', proxyCount: 8, status: 'healthy' as const, image: null, imageWidth: 200, imageHeight: 100 },
-      { id: 'sg_005', name: 'Japan', proxyCount: 6, status: 'healthy' as const, image: null, imageWidth: 200, imageHeight: 100 },
-      { id: 'sg_006', name: 'Hong Kong', proxyCount: 5, status: 'down' as const, image: null, imageWidth: 200, imageHeight: 100 },
+      { id: 'sg_004', name: 'Singapore', proxyCount: 2, status: 'healthy' as const, image: null, imageWidth: 200, imageHeight: 100, proxyIds: ['px_002'] },
+      { id: 'sg_005', name: 'Japan', proxyCount: 2, status: 'healthy' as const, image: null, imageWidth: 200, imageHeight: 100, proxyIds: ['px_003', 'px_011'] },
+      { id: 'sg_006', name: 'Hong Kong', proxyCount: 2, status: 'down' as const, image: null, imageWidth: 200, imageHeight: 100, proxyIds: ['px_004', 'px_012'] },
     ],
     assignedUsers: 98,
   },
@@ -195,9 +259,9 @@ export const mockProxyPresets = [
     description: 'Balanced global proxy distribution',
     isActive: true,
     subgroups: [
-      { id: 'sg_007', name: 'US West', proxyCount: 10, status: 'healthy' as const, image: null, imageWidth: 200, imageHeight: 100 },
-      { id: 'sg_008', name: 'EU Central', proxyCount: 8, status: 'healthy' as const, image: null, imageWidth: 200, imageHeight: 100 },
-      { id: 'sg_009', name: 'BD', proxyCount: 7, status: 'healthy' as const, image: null, imageWidth: 200, imageHeight: 100 },
+      { id: 'sg_007', name: 'US West', proxyCount: 2, status: 'healthy' as const, image: null, imageWidth: 200, imageHeight: 100, proxyIds: ['px_010'] },
+      { id: 'sg_008', name: 'EU Central', proxyCount: 2, status: 'healthy' as const, image: null, imageWidth: 200, imageHeight: 100, proxyIds: ['px_007'] },
+      { id: 'sg_009', name: 'BD', proxyCount: 2, status: 'healthy' as const, image: null, imageWidth: 200, imageHeight: 100, proxyIds: ['px_008', 'px_009'] },
     ],
     assignedUsers: 210,
   },

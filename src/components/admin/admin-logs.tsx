@@ -2,10 +2,12 @@
 
 import React, { useState, useMemo } from 'react'
 import { mockActivityLogs } from '@/lib/mock-data'
+import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Table,
@@ -23,6 +25,16 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {
   ScrollText,
   Search,
   CalendarDays,
@@ -31,6 +43,7 @@ import {
   DollarSign,
   Users,
   Filter,
+  Trash2,
 } from 'lucide-react'
 
 type LogType = 'normal' | 'paid' | 'referral'
@@ -82,17 +95,36 @@ function getRowClass(type: LogType): string {
 }
 
 export function AdminLogs() {
+  const [logs, setLogs] = useState<LogEntry[]>(() =>
+    [...mockActivityLogs].sort((a, b) =>
+      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    )
+  )
   const [typeFilter, setTypeFilter] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [activeTab, setActiveTab] = useState('all')
 
-  const logs: LogEntry[] = useMemo(() => {
-    return [...mockActivityLogs].sort((a, b) => {
-      return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+  // Bulk select
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
     })
-  }, [])
+  }
+
+  const toggleSelectAll = (ids: string[]) => {
+    setSelectedIds(prev => {
+      if (prev.size === ids.length) return new Set()
+      return new Set(ids)
+    })
+  }
 
   const filteredLogs = useMemo(() => {
     let result = logs
@@ -126,6 +158,8 @@ export function AdminLogs() {
     return result
   }, [logs, activeTab, typeFilter, searchQuery, dateFrom, dateTo])
 
+  const filteredIds = filteredLogs.map((l) => l.id)
+
   // Stats
   const totalLogs = logs.length
   const normalCount = logs.filter((l) => l.type === 'normal').length
@@ -135,6 +169,15 @@ export function AdminLogs() {
   const handleTabChange = (value: string) => {
     setActiveTab(value)
     setTypeFilter(value)
+    setSelectedIds(new Set())
+  }
+
+  const handleBulkDelete = () => {
+    const count = selectedIds.size
+    setLogs((prev) => prev.filter((l) => !selectedIds.has(l.id)))
+    toast.success(`${count} log entry/entries deleted`)
+    setSelectedIds(new Set())
+    setBulkDeleteOpen(false)
   }
 
   return (
@@ -289,48 +332,103 @@ export function AdminLogs() {
                   <p className="text-sm">Try adjusting your filters</p>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Timestamp</TableHead>
-                        <TableHead>User</TableHead>
-                        <TableHead>Action</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>IP Address</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredLogs.map((log) => (
-                        <TableRow key={log.id} className={getRowClass(log.type)}>
-                          <TableCell className="text-sm text-muted-foreground whitespace-nowrap font-mono text-xs">
-                            {log.timestamp}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <User className="size-3.5 text-muted-foreground" />
-                              <span className="font-medium text-sm">{log.user}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-sm max-w-[300px]">
-                            {log.action}
-                          </TableCell>
-                          <TableCell>
-                            <TypeBadge type={log.type} />
-                          </TableCell>
-                          <TableCell className="font-mono text-xs text-muted-foreground">
-                            {log.ip}
-                          </TableCell>
+                <>
+                  {/* Bulk Action Bar */}
+                  {selectedIds.size > 0 && (
+                    <div className="flex items-center gap-3 p-3 mb-4 bg-muted/50 rounded-lg border">
+                      <span className="text-sm font-medium">{selectedIds.size} selected</span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setBulkDeleteOpen(true)}
+                        className="gap-1 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                      >
+                        <Trash2 className="size-3.5" />
+                        Delete Selected
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectedIds(new Set())}
+                      >
+                        Clear selection
+                      </Button>
+                    </div>
+                  )}
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-12">
+                            <Checkbox
+                              checked={selectedIds.size === filteredIds.length && filteredIds.length > 0}
+                              onCheckedChange={() => toggleSelectAll(filteredIds)}
+                            />
+                          </TableHead>
+                          <TableHead>Timestamp</TableHead>
+                          <TableHead>User</TableHead>
+                          <TableHead>Action</TableHead>
+                          <TableHead>Type</TableHead>
+                          <TableHead>IP Address</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredLogs.map((log) => (
+                          <TableRow key={log.id} className={getRowClass(log.type)}>
+                            <TableCell>
+                              <Checkbox
+                                checked={selectedIds.has(log.id)}
+                                onCheckedChange={() => toggleSelect(log.id)}
+                              />
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground whitespace-nowrap font-mono text-xs">
+                              {log.timestamp}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <User className="size-3.5 text-muted-foreground" />
+                                <span className="font-medium text-sm">{log.user}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-sm max-w-[300px]">
+                              {log.action}
+                            </TableCell>
+                            <TableCell>
+                              <TypeBadge type={log.type} />
+                            </TableCell>
+                            <TableCell className="font-mono text-xs text-muted-foreground">
+                              {log.ip}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Bulk Delete Confirmation */}
+      <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Selected Logs</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>{selectedIds.size}</strong> log entry/entries?
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleBulkDelete} className="bg-red-600 hover:bg-red-700">
+              Delete Selected
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

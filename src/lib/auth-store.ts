@@ -17,9 +17,11 @@ interface User {
 interface AuthState {
   isAuthenticated: boolean
   user: User | null
-  login: (provider: 'google' | 'telegram', role?: UserRole) => void
-  loginAsAdmin: () => void
+  login: (provider: 'google' | 'telegram') => UserRole
+  loginAsAdmin: () => UserRole
+  loginAsUser: () => void
   logout: () => void
+  deductBalance: (amount: number) => void
 }
 
 const mockUser: User = {
@@ -46,25 +48,45 @@ const mockAdmin: User = {
   role: 'admin',
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+// Simulates a backend check: is this OAuth account an admin?
+// For demo: Google account → admin (admin@corex.io is a Google account)
+// Telegram account → regular user
+function mockCheckAdmin(provider: 'google' | 'telegram'): UserRole {
+  if (provider === 'google') return 'admin'
+  return 'user'
+}
+
+export const useAuthStore = create<AuthState>((set, get) => ({
   isAuthenticated: false,
   user: null,
-  login: (provider, role = 'user') => {
-    set({
-      isAuthenticated: true,
-      user: { ...mockUser, provider, role },
-    })
+  login: (provider) => {
+    const role = mockCheckAdmin(provider)
+    const baseUser = role === 'admin' ? mockAdmin : mockUser
+    const user = { ...baseUser, provider }
+    set({ isAuthenticated: true, user })
+    return role
   },
   loginAsAdmin: () => {
-    set({
-      isAuthenticated: true,
-      user: { ...mockAdmin },
-    })
+    set({ isAuthenticated: true, user: { ...mockAdmin } })
+    return 'admin' as UserRole
+  },
+  loginAsUser: () => {
+    const currentUser = get().user
+    if (currentUser && currentUser.role === 'admin') {
+      // Admin choosing to login as user — switch to mock user persona
+      set({ user: { ...mockUser, provider: currentUser.provider } })
+    }
   },
   logout: () => {
     set({
       isAuthenticated: false,
       user: null,
     })
+  },
+  deductBalance: (amount: number) => {
+    const user = get().user
+    if (user) {
+      set({ user: { ...user, balance: user.balance - amount } })
+    }
   },
 }))

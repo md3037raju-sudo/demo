@@ -6,6 +6,7 @@ import { mockTickets } from '@/lib/mock-data'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import {
@@ -31,6 +32,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -105,11 +116,33 @@ export function AdminTicketsPage() {
   const [selectedTicket, setSelectedTicket] = useState<TicketData | null>(null)
   const [replyText, setReplyText] = useState('')
 
+  // Bulk select
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkCloseOpen, setBulkCloseOpen] = useState(false)
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const toggleSelectAll = (ids: string[]) => {
+    setSelectedIds(prev => {
+      if (prev.size === ids.length) return new Set()
+      return new Set(ids)
+    })
+  }
+
   const filteredTickets = tickets.filter((t) => {
     if (statusFilter !== 'all' && t.status !== statusFilter) return false
     if (priorityFilter !== 'all' && t.priority !== priorityFilter) return false
     return true
   })
+
+  const filteredTicketIds = filteredTickets.map((t) => t.id)
 
   const openCount = tickets.filter((t) => t.status === 'open').length
   const inProgressCount = tickets.filter((t) => t.status === 'in_progress').length
@@ -203,6 +236,20 @@ export function AdminTicketsPage() {
     handleChangeStatus(ticketId, 'in_progress')
   }
 
+  // Bulk close
+  const handleBulkClose = () => {
+    const count = selectedIds.size
+    const now = new Date().toISOString().replace('T', ' ').slice(0, 16)
+    setTickets((prev) =>
+      prev.map((t) =>
+        selectedIds.has(t.id) ? { ...t, status: 'closed' as const, lastUpdate: now } : t
+      )
+    )
+    toast.success(`${count} ticket(s) closed`)
+    setSelectedIds(new Set())
+    setBulkCloseOpen(false)
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -285,6 +332,28 @@ export function AdminTicketsPage() {
         </CardContent>
       </Card>
 
+      {/* Bulk Action Bar */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border">
+          <span className="text-sm font-medium">{selectedIds.size} selected</span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setBulkCloseOpen(true)}
+            className="gap-1"
+          >
+            Close Selected
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSelectedIds(new Set())}
+          >
+            Clear selection
+          </Button>
+        </div>
+      )}
+
       {/* Tickets Table */}
       <Card>
         <CardContent className="pt-6">
@@ -292,6 +361,12 @@ export function AdminTicketsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-12">
+                    <Checkbox
+                      checked={selectedIds.size === filteredTicketIds.length && filteredTicketIds.length > 0}
+                      onCheckedChange={() => toggleSelectAll(filteredTicketIds)}
+                    />
+                  </TableHead>
                   <TableHead>ID</TableHead>
                   <TableHead>User</TableHead>
                   <TableHead>Subject</TableHead>
@@ -306,6 +381,12 @@ export function AdminTicketsPage() {
               <TableBody>
                 {filteredTickets.map((ticket) => (
                   <TableRow key={ticket.id}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedIds.has(ticket.id)}
+                        onCheckedChange={() => toggleSelect(ticket.id)}
+                      />
+                    </TableCell>
                     <TableCell className="font-mono text-xs">{ticket.id}</TableCell>
                     <TableCell className="font-medium">{ticket.userName}</TableCell>
                     <TableCell>{ticket.subject}</TableCell>
@@ -361,7 +442,7 @@ export function AdminTicketsPage() {
                 ))}
                 {filteredTickets.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
                       No tickets match the current filters
                     </TableCell>
                   </TableRow>
@@ -371,6 +452,25 @@ export function AdminTicketsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Bulk Close Confirmation */}
+      <AlertDialog open={bulkCloseOpen} onOpenChange={setBulkCloseOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Close Selected Tickets</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to close <strong>{selectedIds.size}</strong> ticket(s)?
+              This will mark them as resolved.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleBulkClose}>
+              Close Selected
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Ticket Detail Dialog */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
