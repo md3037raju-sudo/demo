@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { mockUsers } from '@/lib/mock-data'
+import { useUserStore, type User, type UserStatus, type UserRole } from '@/lib/user-store'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -68,9 +68,6 @@ import {
   History,
 } from 'lucide-react'
 
-type UserStatus = 'active' | 'banned' | 'suspended'
-type UserRole = 'user' | 'moderator' | 'admin'
-
 interface BalanceHistoryEntry {
   id: string
   date: string
@@ -87,20 +84,6 @@ const mockBalanceHistory: BalanceHistoryEntry[] = [
   { id: 'bh_004', date: '2025-01-01', type: 'payment', description: 'CoreX Pro - Monthly', amount: -29.99, balanceAfter: 174.49 },
   { id: 'bh_005', date: '2024-12-20', type: 'topup', description: 'Nagad Top-up', amount: 200.00, balanceAfter: 204.48 },
 ]
-
-interface User {
-  id: string
-  name: string
-  email: string
-  provider: string
-  role: UserRole
-  balance: number
-  status: UserStatus
-  joinedAt: string
-  subscriptions: number
-  devices: number
-  lastActive: string
-}
 
 function StatusBadge({ status }: { status: UserStatus }) {
   switch (status) {
@@ -152,7 +135,7 @@ function BalanceTypeBadge({ type }: { type: BalanceHistoryEntry['type'] }) {
 }
 
 export function AdminUsers() {
-  const [users, setUsers] = useState<User[]>(mockUsers as unknown as User[])
+  const { users, setUserStatus, setUserRole, setUserBalance } = useUserStore()
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [roleFilter, setRoleFilter] = useState<string>('all')
@@ -237,9 +220,7 @@ export function AdminUsers() {
         toast.error('Please enter a valid balance amount')
         return
       }
-      setUsers((prev) =>
-        prev.map((u) => (u.id === balanceUser.id ? { ...u, balance: newBalance } : u))
-      )
+      setUserBalance(balanceUser.id, newBalance)
       toast.success(`Balance updated for ${balanceUser.name}`, {
         description: `New balance: ৳${newBalance.toFixed(2)}`,
       })
@@ -250,9 +231,7 @@ export function AdminUsers() {
   const handleChangeRole = (userId: string, newRole: UserRole) => {
     const user = users.find((u) => u.id === userId)
     if (user) {
-      setUsers((prev) =>
-        prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u))
-      )
+      setUserRole(userId, newRole)
       toast.success(`Role updated for ${user.name}`, {
         description: `New role: ${newRole.charAt(0).toUpperCase() + newRole.slice(1)}`,
       })
@@ -261,9 +240,7 @@ export function AdminUsers() {
 
   const handleBanUser = () => {
     if (banUser) {
-      setUsers((prev) =>
-        prev.map((u) => (u.id === banUser.id ? { ...u, status: 'banned' } : u))
-      )
+      setUserStatus(banUser.id, 'banned')
       toast.success(`User ${banUser.name} has been banned`)
       setBanOpen(false)
     }
@@ -271,9 +248,7 @@ export function AdminUsers() {
 
   const handleSuspendUser = () => {
     if (suspendUser) {
-      setUsers((prev) =>
-        prev.map((u) => (u.id === suspendUser.id ? { ...u, status: 'suspended' } : u))
-      )
+      setUserStatus(suspendUser.id, 'suspended')
       toast.success(`User ${suspendUser.name} has been suspended`)
       setSuspendOpen(false)
     }
@@ -281,9 +256,7 @@ export function AdminUsers() {
 
   const handleActivateUser = () => {
     if (activateUser) {
-      setUsers((prev) =>
-        prev.map((u) => (u.id === activateUser.id ? { ...u, status: 'active' } : u))
-      )
+      setUserStatus(activateUser.id, 'active')
       toast.success(`User ${activateUser.name} has been activated`)
       setActivateOpen(false)
     }
@@ -292,9 +265,7 @@ export function AdminUsers() {
   // Bulk actions
   const handleBulkBan = () => {
     const count = selectedIds.size
-    setUsers((prev) =>
-      prev.map((u) => (selectedIds.has(u.id) ? { ...u, status: 'banned' } : u))
-    )
+    selectedIds.forEach((id) => setUserStatus(id, 'banned'))
     toast.success(`${count} user(s) have been banned`)
     setSelectedIds(new Set())
     setBulkBanOpen(false)
@@ -302,9 +273,7 @@ export function AdminUsers() {
 
   const handleBulkSuspend = () => {
     const count = selectedIds.size
-    setUsers((prev) =>
-      prev.map((u) => (selectedIds.has(u.id) ? { ...u, status: 'suspended' } : u))
-    )
+    selectedIds.forEach((id) => setUserStatus(id, 'suspended'))
     toast.success(`${count} user(s) have been suspended`)
     setSelectedIds(new Set())
     setBulkSuspendOpen(false)
@@ -312,9 +281,7 @@ export function AdminUsers() {
 
   const handleBulkActivate = () => {
     const count = selectedIds.size
-    setUsers((prev) =>
-      prev.map((u) => (selectedIds.has(u.id) ? { ...u, status: 'active' } : u))
-    )
+    selectedIds.forEach((id) => setUserStatus(id, 'active'))
     toast.success(`${count} user(s) have been activated`)
     setSelectedIds(new Set())
     setBulkActivateOpen(false)

@@ -205,7 +205,7 @@ export function LoginPage() {
               <AlertTriangle className="size-5 shrink-0" />
               <div>
                 <p className="font-semibold text-sm">Registration Paused</p>
-                <p className="text-xs opacity-80 mt-0.5">New registration is temporarily paused. Please try again later.</p>
+                <p className="text-xs opacity-80 mt-0.5">New account registration is temporarily paused. Existing users can still log in.</p>
               </div>
             </div>
           )}
@@ -218,7 +218,6 @@ export function LoginPage() {
               size="lg"
               className="w-full bg-white hover:bg-gray-50 text-gray-800 border-gray-300 hover:border-gray-400 dark:bg-white dark:hover:bg-gray-100 dark:text-gray-800 dark:border-gray-300 h-12 text-base font-medium"
               onClick={() => handleLogin('google')}
-              disabled={!registrationEnabled}
             >
               <GoogleIcon />
               Continue with Google
@@ -229,7 +228,6 @@ export function LoginPage() {
               size="lg"
               className="w-full bg-[#2AABEE] hover:bg-[#229ED9] text-white border-0 h-12 text-base font-medium shadow-md"
               onClick={() => handleLogin('telegram')}
-              disabled={!registrationEnabled}
             >
               <TelegramIcon />
               Continue with Telegram

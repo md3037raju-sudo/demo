@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { usePlanStore } from '@/lib/plan-store'
 import {
-  mockPlans,
   mockProxyPresets,
   type Plan,
   type PlanDuration,
@@ -111,10 +111,8 @@ const DURATIONS: PlanDuration[] = ['3d', '7d', '15d', '30d', '6m', '1y']
 
 // ─── Component ───────────────────────────────────────────────────
 export function AdminPlans() {
-  // Plan list (local state, initialized from mock)
-  const [plans, setPlans] = useState<Plan[]>(() =>
-    mockPlans.map((p) => ({ ...p, devicePricing: { ...p.devicePricing }, features: [...p.features] }))
-  )
+  // Plan list (from Zustand store)
+  const { plans, addPlan, updatePlan, deletePlan: deletePlanFromStore, deletePlans, setPlansActive } = usePlanStore()
 
   // Selection
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -257,7 +255,7 @@ export function AdminPlans() {
       devicePricing: { ...plan.devicePricing },
       createdAt: new Date().toISOString().split('T')[0],
     }
-    setPlans((prev) => [...prev, newPlan])
+    addPlan(newPlan)
     toast.success(`Cloned "${plan.name}" as "${newPlan.name}"`)
   }
 
@@ -281,27 +279,20 @@ export function AdminPlans() {
       .filter(Boolean)
 
     if (editingPlan) {
-      setPlans((prev) =>
-        prev.map((p) =>
-          p.id === editingPlan.id
-            ? {
-                ...p,
-                name: planForm.name,
-                description: planForm.description,
-                speed: planForm.speed,
-                bandwidthType: planForm.bandwidthType,
-                bandwidthLimit: planForm.bandwidthType === 'unlimited' ? 'Unlimited' : planForm.bandwidthLimit,
-                duration: planForm.duration,
-                basePrice: planForm.basePrice,
-                devicePricing: { ...planForm.devicePricing },
-                proxyPresetId: planForm.proxyPresetId === 'none' ? null : planForm.proxyPresetId === 'auto' ? 'auto' : planForm.proxyPresetId,
-                features: featuresList,
-                isFeatured: planForm.isFeatured,
-                isActive: planForm.isActive,
-              }
-            : p
-        )
-      )
+      updatePlan(editingPlan.id, {
+        name: planForm.name,
+        description: planForm.description,
+        speed: planForm.speed,
+        bandwidthType: planForm.bandwidthType,
+        bandwidthLimit: planForm.bandwidthType === 'unlimited' ? 'Unlimited' : planForm.bandwidthLimit,
+        duration: planForm.duration,
+        basePrice: planForm.basePrice,
+        devicePricing: { ...planForm.devicePricing },
+        proxyPresetId: planForm.proxyPresetId === 'none' ? null : planForm.proxyPresetId === 'auto' ? 'auto' : planForm.proxyPresetId,
+        features: featuresList,
+        isFeatured: planForm.isFeatured,
+        isActive: planForm.isActive,
+      })
       toast.success('Plan updated successfully')
     } else {
       const newPlan: Plan = {
@@ -322,7 +313,7 @@ export function AdminPlans() {
         features: featuresList,
         createdAt: new Date().toISOString().split('T')[0],
       }
-      setPlans((prev) => [...prev, newPlan])
+      addPlan(newPlan)
       toast.success('Plan created successfully')
     }
     setPlanDialogOpen(false)
@@ -335,8 +326,8 @@ export function AdminPlans() {
     setDeleteDialogOpen(true)
   }
 
-  const deletePlan = () => {
-    setPlans((prev) => prev.filter((p) => p.id !== deletingPlanId))
+  const handleDeletePlan = () => {
+    deletePlanFromStore(deletingPlanId!)
     setSelectedIds((prev) => {
       const next = new Set(prev)
       next.delete(deletingPlanId!)
@@ -348,23 +339,19 @@ export function AdminPlans() {
 
   // ── Bulk actions ─────────────────────────────────────────────
   const bulkActivate = () => {
-    setPlans((prev) =>
-      prev.map((p) => (selectedIds.has(p.id) ? { ...p, isActive: true } : p))
-    )
+    setPlansActive(Array.from(selectedIds), true)
     toast.success(`${selectedIds.size} plan(s) activated`)
     setSelectedIds(new Set())
   }
 
   const bulkDeactivate = () => {
-    setPlans((prev) =>
-      prev.map((p) => (selectedIds.has(p.id) ? { ...p, isActive: false } : p))
-    )
+    setPlansActive(Array.from(selectedIds), false)
     toast.success(`${selectedIds.size} plan(s) deactivated`)
     setSelectedIds(new Set())
   }
 
   const bulkDelete = () => {
-    setPlans((prev) => prev.filter((p) => !selectedIds.has(p.id)))
+    deletePlans(Array.from(selectedIds))
     toast.success(`${selectedIds.size} plan(s) deleted`)
     setSelectedIds(new Set())
     setBulkDeleteDialogOpen(false)
@@ -1156,7 +1143,7 @@ export function AdminPlans() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={deletePlan} className="bg-red-600 hover:bg-red-700">
+            <AlertDialogAction onClick={handleDeletePlan} className="bg-red-600 hover:bg-red-700">
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

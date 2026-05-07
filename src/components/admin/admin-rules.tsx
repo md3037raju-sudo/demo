@@ -36,7 +36,7 @@ import {
   XCircle,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { Admin2faSettings } from './admin-2fa-settings'
+import { Admin2FASettings } from './admin-2fa-settings'
 import { useReferralStore } from '@/lib/referral-store'
 
 interface Alert {
@@ -650,7 +650,7 @@ export function AdminRules() {
       </Card>
 
       {/* 5. Two-Factor Authentication */}
-      <Admin2faSettings />
+      <Admin2FASettings />
     </div>
   )
 }

@@ -683,7 +683,7 @@ export function AdminPayments() {
       </AlertDialog>
 
       {/* Bulk Reject Confirmation */}
-      <AlertDialog open={bulkRejectOpen} onValueChange={setBulkRejectOpen}>
+      <AlertDialog open={bulkRejectOpen} onOpenChange={setBulkRejectOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Reject Selected Payments</AlertDialogTitle>

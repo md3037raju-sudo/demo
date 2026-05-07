@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { mockSubscriptions, mockRecycleBin } from '@/lib/mock-data'
+import { useSubscriptionStore, type Subscription } from '@/lib/subscription-store'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -60,21 +60,6 @@ import {
 
 type SubStatus = 'active' | 'expired' | 'renewable'
 
-interface Subscription {
-  id: string
-  userId: string
-  userName: string
-  name: string
-  plan: string
-  status: SubStatus
-  startDate: string
-  expiryDate: string
-  price: number
-  bandwidthUsed: number
-  bandwidthLimit: number
-  deepLink: string
-}
-
 interface RecycleItem {
   id: string
   subscriptionId: string
@@ -103,12 +88,8 @@ function PlanTypeBadge({ plan }: { plan: string }) {
 }
 
 export function AdminSubscriptions() {
-  const [subscriptions, setSubscriptions] = useState<Subscription[]>(
-    mockSubscriptions as unknown as Subscription[]
-  )
-  const [recycleBin, setRecycleBin] = useState<RecycleItem[]>(
-    mockRecycleBin as unknown as RecycleItem[]
-  )
+  const { subscriptions, addSubscription, removeSubscription } = useSubscriptionStore()
+  const [recycleBin, setRecycleBin] = useState<RecycleItem[]>([])
   const [activeTab, setActiveTab] = useState('active')
 
   // View Details dialog
@@ -178,13 +159,13 @@ export function AdminSubscriptions() {
         toast.error('Please enter a valid bandwidth limit')
         return
       }
-      setSubscriptions((prev) =>
-        prev.map((s) =>
+      useSubscriptionStore.setState((state) => ({
+        subscriptions: state.subscriptions.map((s) =>
           s.id === editSub.id
             ? { ...s, expiryDate: editExpiry, bandwidthLimit: newBandwidth }
             : s
-        )
-      )
+        ),
+      }))
       toast.success(`Subscription ${editSub.name} updated`, {
         description: `Expiry: ${editExpiry}, Bandwidth: ${newBandwidth} GB`,
       })
@@ -209,8 +190,8 @@ export function AdminSubscriptions() {
         price: cancelSub.price,
       }
       setRecycleBin((prev) => [...prev, recycleItem])
-      // Remove from subscriptions
-      setSubscriptions((prev) => prev.filter((s) => s.id !== cancelSub.id))
+      // Remove from store
+      removeSubscription(cancelSub.id)
       toast.success(`Subscription ${cancelSub.name} cancelled and moved to recycle bin`)
       setCancelOpen(false)
     }
@@ -234,8 +215,9 @@ export function AdminSubscriptions() {
         bandwidthUsed: 0,
         bandwidthLimit: 100,
         deepLink: `corex://configure/${restoreItem.subscriptionId}`,
+        devices: 1,
       }
-      setSubscriptions((prev) => [...prev, restoredSub])
+      addSubscription(restoredSub)
       setRecycleBin((prev) => prev.filter((r) => r.id !== restoreItem.id))
       toast.success(`Subscription ${restoreItem.subscriptionName} restored`, {
         description: 'The subscription has been reactivated for the user.',
@@ -265,7 +247,7 @@ export function AdminSubscriptions() {
       userName: item.userName,
       name: item.subscriptionName,
       plan: item.plan,
-      status: 'active' as SubStatus,
+      status: 'active' as const,
       startDate: new Date().toISOString().split('T')[0],
       expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
         .toISOString()
@@ -274,8 +256,9 @@ export function AdminSubscriptions() {
       bandwidthUsed: 0,
       bandwidthLimit: 100,
       deepLink: `corex://configure/${item.subscriptionId}`,
+      devices: 1,
     }))
-    setSubscriptions((prev) => [...prev, ...restoredSubs])
+    restoredSubs.forEach((sub) => addSubscription(sub))
     setRecycleBin((prev) => prev.filter((r) => !selectedIds.has(r.id)))
     toast.success(`${items.length} subscription(s) restored`)
     setSelectedIds(new Set())

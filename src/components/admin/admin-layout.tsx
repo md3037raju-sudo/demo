@@ -63,6 +63,7 @@ import { AdminTicketsPage as AdminTickets } from './admin-tickets'
 import { AdminCmsPage as AdminCMS } from './admin-cms'
 import { AdminCoupons } from './admin-coupons'
 import { AdminUtility } from './admin-utility'
+import { Admin2FASettings } from './admin-2fa-settings'
 import { use2FAStore } from '@/lib/2fa-store'
 
 interface NavItem {
@@ -90,6 +91,7 @@ const secondaryNavItems: NavItem[] = [
   { label: 'Coupons', icon: Ticket, page: 'admin/coupons' },
   { label: 'CMS', icon: FileEdit, page: 'admin/cms' },
   { label: 'Utility', icon: Settings2, page: 'admin/utility' },
+  { label: '2FA Security', icon: ShieldCheck, page: 'admin/2fa' },
 ]
 
 function getPageTitle(page: string): string {
@@ -124,6 +126,8 @@ function getPageTitle(page: string): string {
       return 'Coupon Management'
     case 'admin/utility':
       return 'Utility Settings'
+    case 'admin/2fa':
+      return '2FA Security Settings'
     default:
       return 'Admin Panel'
   }
@@ -161,6 +165,8 @@ function renderAdminPage(page: string) {
       return <AnimateIn type="slide-up" key="admin-coupons"><AdminCoupons /></AnimateIn>
     case 'admin/utility':
       return <AnimateIn type="slide-up" key="admin-utility"><AdminUtility /></AnimateIn>
+    case 'admin/2fa':
+      return <AnimateIn type="slide-up" key="admin-2fa"><Admin2FASettings /></AnimateIn>
     default:
       return <AnimateIn type="slide-up" key="admin-default"><AdminDashboard /></AnimateIn>
   }
