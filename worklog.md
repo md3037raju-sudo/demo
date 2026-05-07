@@ -23,3 +23,23 @@ Stage Summary:
 - Renew = reactivate same subscription (not create new)
 - Extend = add duration to active subscription from current expiry
 - Stats consistent between dashboard and subscription pages
+
+---
+Task ID: 2
+Agent: Main
+Task: Fix dark/light mode logo switching + Add thunder animation on logo
+
+Work Log:
+- Identified critical bug: corex-logo.tsx used `useTheme()` from `next-themes` but no `ThemeProvider` existed in the app — `resolvedTheme` was always undefined, causing logo to always show light variant
+- Fixed by replacing `import { useTheme } from 'next-themes'` with `import { useThemeStore } from '@/lib/theme-store'` — now reads `mode` from Zustand store which is actually used by the app's ThemeToggle
+- Added `animate` prop to both `CoreXLogo` and `CoreXLogoIcon` components
+- Added `thunder-glow` CSS class with `thunderPulse` keyframe animation — creates periodic glow/flash effect on the logo simulating lightning crackling on the thunder symbol
+- Added `thunder-flash` CSS class with `thunderFlash` keyframe — creates brief radial flash overlay on the logo image
+- Both animations respect `.animate-enabled` class — disabled when animations are turned off in theme settings
+- Updated landing page hero section: `<CoreXLogoIcon size={64} animate />` now shows the thunder animation
+- Removed old inline `drop-shadow` style that was hardcoded
+
+Stage Summary:
+- Logo now correctly switches between corex-logo-dark.png and corex-logo-light.png based on actual theme mode
+- Thunder animation (glow + flash) added to logo and activates on the hero section landing page
+- All pages using CoreXLogo/CoreXLogoIcon automatically benefit from the theme fix

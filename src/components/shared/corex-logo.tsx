@@ -1,7 +1,7 @@
 'use client'
 
-import { useTheme } from 'next-themes'
 import Image from 'next/image'
+import { useThemeStore } from '@/lib/theme-store'
 
 interface CoreXLogoProps {
   /** Height of the logo image in pixels. Width auto-scales. Default: 32 */
@@ -12,6 +12,8 @@ interface CoreXLogoProps {
   showAdminBadge?: boolean
   /** Show "CoreX" text after logo */
   showText?: boolean
+  /** Enable thunder glow animation on the logo */
+  animate?: boolean
 }
 
 export function CoreXLogo({
@@ -19,10 +21,11 @@ export function CoreXLogo({
   className = '',
   showAdminBadge = false,
   showText = true,
+  animate = false,
 }: CoreXLogoProps) {
-  const { resolvedTheme } = useTheme()
+  const mode = useThemeStore((s) => s.mode)
 
-  const logoSrc = resolvedTheme === 'dark'
+  const logoSrc = mode === 'dark'
     ? '/corex-logo-dark.png'
     : '/corex-logo-light.png'
 
@@ -31,14 +34,19 @@ export function CoreXLogo({
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>
-      <Image
-        src={logoSrc}
-        alt="CoreX Logo"
-        width={width}
-        height={height}
-        className="object-contain"
-        priority
-      />
+      <div className={`relative ${animate ? 'thunder-glow' : ''}`}>
+        <Image
+          src={logoSrc}
+          alt="CoreX Logo"
+          width={width}
+          height={height}
+          className="object-contain"
+          priority
+        />
+        {animate && (
+          <div className="absolute inset-0 rounded-full thunder-flash pointer-events-none" />
+        )}
+      </div>
       {showText && (
         <span className="font-bold tracking-tight" style={{ fontSize: `${Math.max(14, height * 0.65)}px` }}>
           Core<span className="text-primary">X</span>
@@ -54,21 +62,26 @@ export function CoreXLogo({
 }
 
 /** Compact logo icon only (no text) — for small spaces like hero section or sidebar top bar */
-export function CoreXLogoIcon({ size = 32, className = '' }: { size?: number; className?: string }) {
-  const { resolvedTheme } = useTheme()
+export function CoreXLogoIcon({ size = 32, className = '', animate = false }: { size?: number; className?: string; animate?: boolean }) {
+  const mode = useThemeStore((s) => s.mode)
 
-  const logoSrc = resolvedTheme === 'dark'
+  const logoSrc = mode === 'dark'
     ? '/corex-logo-dark.png'
     : '/corex-logo-light.png'
 
   return (
-    <Image
-      src={logoSrc}
-      alt="CoreX"
-      width={size}
-      height={size}
-      className={`object-contain ${className}`}
-      priority
-    />
+    <div className={`relative ${animate ? 'thunder-glow' : ''}`}>
+      <Image
+        src={logoSrc}
+        alt="CoreX"
+        width={size}
+        height={size}
+        className={`object-contain ${className}`}
+        priority
+      />
+      {animate && (
+        <div className="absolute inset-0 rounded-full thunder-flash pointer-events-none" />
+      )}
+    </div>
   )
 }

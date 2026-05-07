@@ -170,7 +170,7 @@ export function LandingPage() {
               <div className="relative flex items-center justify-center">
                 <div className="absolute size-36 rounded-full bg-primary/10 animate-pulse" />
                 <div className="absolute size-28 rounded-full bg-primary/15" />
-                <CoreXLogoIcon size={64} className="relative drop-shadow-[0_0_24px_rgba(16,185,129,0.4)]" />
+                <CoreXLogoIcon size={64} className="relative" animate />
               </div>
               {/* Orbiting dots */}
               <div className="absolute inset-0 animate-[spin_12s_linear_infinite]">

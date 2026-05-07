@@ -470,3 +470,86 @@
 .animate-enabled ::-webkit-scrollbar-thumb {
   transition: background-color 200ms;
 }
+
+/* ===== CoreX Logo Thunder Animation ===== */
+
+/* Pulsing glow around the logo image */
+.thunder-glow {
+  animation: thunderPulse 3s ease-in-out infinite;
+}
+
+@keyframes thunderPulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 4px oklch(0.65 0.19 160 / 0.3));
+  }
+  15% {
+    filter: drop-shadow(0 0 8px oklch(0.65 0.19 160 / 0.5));
+  }
+  20% {
+    filter: drop-shadow(0 0 4px oklch(0.65 0.19 160 / 0.2));
+  }
+  25% {
+    filter: drop-shadow(0 0 12px oklch(0.65 0.19 160 / 0.7))
+            drop-shadow(0 0 24px oklch(0.65 0.19 160 / 0.3));
+  }
+  35% {
+    filter: drop-shadow(0 0 4px oklch(0.65 0.19 160 / 0.3));
+  }
+  70% {
+    filter: drop-shadow(0 0 6px oklch(0.65 0.19 160 / 0.4));
+  }
+  75% {
+    filter: drop-shadow(0 0 10px oklch(0.65 0.19 160 / 0.6))
+            drop-shadow(0 0 20px oklch(0.65 0.19 160 / 0.25));
+  }
+  85% {
+    filter: drop-shadow(0 0 4px oklch(0.65 0.19 160 / 0.3));
+  }
+}
+
+/* Lightning flash overlay on the logo */
+.thunder-flash {
+  background: radial-gradient(circle, oklch(0.75 0.22 160 / 0.4) 0%, transparent 70%);
+  opacity: 0;
+  animation: thunderFlash 3s ease-in-out infinite;
+}
+
+@keyframes thunderFlash {
+  0%, 100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+  24% {
+    opacity: 0;
+    transform: scale(1);
+  }
+  25% {
+    opacity: 0.6;
+    transform: scale(1.15);
+  }
+  28% {
+    opacity: 0;
+    transform: scale(1);
+  }
+  73% {
+    opacity: 0;
+    transform: scale(1);
+  }
+  74% {
+    opacity: 0.4;
+    transform: scale(1.1);
+  }
+  76% {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+
+/* When animations are disabled, kill thunder animations too */
+:not(.animate-enabled) .thunder-glow {
+  animation: none;
+}
+
+:not(.animate-enabled) .thunder-flash {
+  animation: none;
+}
