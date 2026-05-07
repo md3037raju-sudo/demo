@@ -159,13 +159,12 @@ export function AdminDbInitPage() {
       },
       subscription: {
         subscriptions: subscriptionState.subscriptions,
-        activeDevices: subscriptionState.activeDevices,
       },
       coupon: {
         coupons: couponState.coupons,
       },
       referral: {
-        entries: referralState.entries,
+        entries: referralState.referrals,
         settings: referralState.settings,
       },
     }
