@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CoreX — Download Full Website</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0a0a0a;
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .container { text-align: center; padding: 40px; max-width: 520px; }
+    .logo { font-size: 52px; font-weight: 800; margin-bottom: 8px; }
+    .logo span { color: #f97316; }
+    .subtitle { color: #888; margin-bottom: 36px; font-size: 16px; }
+    .download-btn {
+      display: inline-block;
+      background: linear-gradient(135deg, #f97316, #ea580c);
+      color: #fff;
+      padding: 18px 56px;
+      border-radius: 14px;
+      font-size: 20px;
+      font-weight: 700;
+      text-decoration: none;
+      transition: all 0.25s;
+      box-shadow: 0 4px 24px rgba(249,115,22,0.35);
+      cursor: pointer;
+    }
+    .download-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 40px rgba(249,115,22,0.5);
+    }
+    .badge {
+      display: inline-block;
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 6px 14px;
+      font-size: 12px;
+      color: #f97316;
+      margin-bottom: 28px;
+    }
+    .steps {
+      text-align: left;
+      margin-top: 28px;
+      background: #111;
+      border: 1px solid #222;
+      border-radius: 12px;
+      padding: 24px;
+    }
+    .steps h3 { margin-bottom: 14px; color: #f97316; font-size: 16px; }
+    .steps p { color: #999; font-size: 13px; line-height: 2.2; }
+    .steps code {
+      background: #1a1a1a;
+      padding: 2px 8px;
+      border-radius: 4px;
+      color: #f97316;
+      font-size: 12px;
+    }
+    .footer { margin-top: 24px; color: #555; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">Core<span>X</span></div>
+    <p class="subtitle">Fast & Secure Proxy Platform — Full Source Code</p>
+    <div class="badge">📦 Full Website • 7.9 MB • src + .env + bun.lock</div>
+    <br>
+    <a class="download-btn" href="/corex-website.zip" download="corex-website.zip">
+      ⬇ Download Full Website
+    </a>
+    <div class="steps">
+      <h3>🚀 Local Run:</h3>
+      <p>
+        1. Download & extract: <code>unzip corex-website.zip -d corex</code><br>
+        2. Go to folder: <code>cd corex</code><br>
+        3. Install deps: <code>bun install</code> or <code>npm install</code><br>
+        4. Run server: <code>bun run dev</code> or <code>npm run dev</code><br>
+        5. Open browser: <code>http://localhost:3000</code>
+      </p>
+    </div>
+    <p class="footer">
+      .env.local included with Supabase keys • Works without Supabase too!<br>
+      Google login → Admin • Telegram login → User
+    </p>
+  </div>
+</body>
+</html>
