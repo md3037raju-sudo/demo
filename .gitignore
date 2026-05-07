@@ -1,5 +1,3 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
 # dependencies
 node_modules
 /.pnp
@@ -30,26 +28,37 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files
 .env*
+!.env.example
 
 # vercel
 .vercel
 
-
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local
 local-*
 .claude
 .z-ai-config
 *.log
 dev.log
-dev.out.log
-test
-prompt
-
 server.log
-# Skills directory
-/skills/.env.local
+
+# skills (not needed for the website)
+/skills/
+
+# db files
+db/*.db
+db/*.db-journal
+
+# zip
 corex-website.zip
+
+# examples
+/examples/
+
+# mini-services (not needed)
+/mini-services/
