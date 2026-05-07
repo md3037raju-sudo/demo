@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CoreX — Download</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0a0a0a;
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .container {
+      text-align: center;
+      padding: 40px;
+      max-width: 500px;
+    }
+    .logo {
+      font-size: 48px;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+    .logo span { color: #f97316; }
+    .subtitle { color: #888; margin-bottom: 40px; font-size: 16px; }
+    .download-btn {
+      display: inline-block;
+      background: #f97316;
+      color: #fff;
+      padding: 16px 48px;
+      border-radius: 12px;
+      font-size: 18px;
+      font-weight: 700;
+      text-decoration: none;
+      transition: all 0.2s;
+      box-shadow: 0 4px 24px rgba(249,115,22,0.3);
+    }
+    .download-btn:hover {
+      background: #ea580c;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(249,115,22,0.4);
+    }
+    .info {
+      margin-top: 32px;
+      color: #666;
+      font-size: 14px;
+      line-height: 1.8;
+    }
+    .info code {
+      background: #1a1a1a;
+      padding: 2px 8px;
+      border-radius: 4px;
+      color: #aaa;
+      font-size: 13px;
+    }
+    .steps {
+      text-align: left;
+      margin-top: 24px;
+      background: #111;
+      border: 1px solid #222;
+      border-radius: 12px;
+      padding: 20px 24px;
+    }
+    .steps h3 { margin-bottom: 12px; color: #f97316; font-size: 15px; }
+    .steps p { color: #888; font-size: 13px; line-height: 2; }
+    .steps code { color: #f97316; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">Core<span>X</span></div>
+    <p class="subtitle">Fast & Secure Proxy Platform</p>
+    <a class="download-btn" href="/corex-website.zip" download="corex-website.zip">
+      ⬇ Download CoreX Website (1.3 MB)
+    </a>
+    <div class="steps">
+      <h3>📋 Local Setup:</h3>
+      <p>
+        1. Extract: <code>unzip corex-website.zip -d corex</code><br>
+        2. Install: <code>cd corex && npm install</code><br>
+        3. Run: <code>npm run dev</code><br>
+        4. Open: <code>http://localhost:3000</code>
+      </p>
+    </div>
+    <p class="info">
+      Works without Supabase! Full setup guide in <code>LOCAL_SETUP.md</code>
+    </p>
+  </div>
+</body>
+</html>
