@@ -84,3 +84,42 @@ Stage Summary:
 - Admin Payments page connected to shared store, approve actually adds balance
 - Admin Utility page controls APK link, tutorial link, payment method numbers
 - Everything is admin-controllable through the Utility settings page
+
+---
+Task ID: 4
+Agent: Main
+Task: Admin utility payment number update, Telegram/Facebook links, premium social icons, user tickets page
+
+Work Log:
+- Updated `utility-store.ts`: Added `telegramLink` and `facebookLink` fields + `isUrl()` helper
+- Created `src/components/shared/social-links.tsx`: Premium branded Telegram & Facebook icons
+  - URL mode: if value starts with http/https → clicking opens the link in new tab
+  - Text mode: any other text (e.g. "Coming Soon") → clicking shows a dialog popup with that message
+  - "Soon" badge shown on text-mode links
+  - Hover effects with scale + shadow animation
+- Updated `admin-utility.tsx`: Added "Social Links" configuration section
+  - Telegram link/text input with live URL/text detection badge
+  - Facebook link/text input with live URL/text detection badge
+  - Info box explaining URL mode vs Text mode behavior
+  - Separate "Save Social Links" button
+  - Payment method number update section (bKash/Nagad) with personal/merchant type toggle
+- Added `SocialLinks` component to:
+  - Landing page footer (next to "Available worldwide")
+  - Dashboard Settings page ("Contact & Support" section)
+- Created `user-tickets-page.tsx`: User-side support ticket system
+  - Stats: Open / In Progress / Closed counts
+  - Tickets table with status and priority badges
+  - "New Ticket" dialog with subject, priority, and description
+  - Added to dashboard sidebar navigation as "Tickets"
+- Updated `settings-page.tsx`: Added "Contact & Support" card
+  - Social links row with premium icons
+  - "Having a problem? Open a support ticket" with button → navigates to dashboard/tickets
+- Updated navigation store: Added `dashboard/tickets` page type
+- Updated dashboard layout: Added Tickets nav item + UserTicketsPage render
+
+Stage Summary:
+- Admin can update payment method numbers (bKash/Nagad) from Utility page
+- Admin can set Telegram & Facebook links — URL opens link, text shows popup
+- Premium branded social icons appear on landing page footer and settings page
+- Users can open support tickets from dashboard → Tickets page
+- Settings page has Contact & Support section with social links + ticket button

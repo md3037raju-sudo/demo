@@ -33,7 +33,10 @@ import {
   Trash2,
   LogOut,
   CheckCircle2,
+  Headphones,
+  MessageSquare,
 } from 'lucide-react'
+import { SocialLinks } from '@/components/shared/social-links'
 
 export function SettingsPage() {
   const { user, logout } = useAuthStore()
@@ -206,6 +209,56 @@ export function SettingsPage() {
             >
               <LogOut className="size-4" />
               Sign out of all devices
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Contact & Support Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Headphones className="size-5" />
+            Contact &amp; Support
+          </CardTitle>
+          <CardDescription>
+            Reach us through social channels or open a support ticket
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Social Links */}
+          <div className="flex items-center justify-between rounded-lg border p-4">
+            <div className="flex items-center gap-3">
+              <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10">
+                <Send className="size-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">Connect with us</p>
+                <p className="text-xs text-muted-foreground">Follow us on Telegram &amp; Facebook</p>
+              </div>
+            </div>
+            <SocialLinks iconSize={18} />
+          </div>
+
+          {/* Open Ticket */}
+          <div className="flex items-center justify-between rounded-lg border p-4">
+            <div className="flex items-center gap-3">
+              <div className="flex size-10 items-center justify-center rounded-lg bg-amber-500/10">
+                <MessageSquare className="size-5 text-amber-400" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">Having a problem?</p>
+                <p className="text-xs text-muted-foreground">Open a support ticket and we&apos;ll help you out</p>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => navigate('dashboard/tickets')}
+            >
+              <MessageSquare className="size-3.5" />
+              Open Ticket
             </Button>
           </div>
         </CardContent>

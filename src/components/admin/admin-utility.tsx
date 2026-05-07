@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { useUtilityStore } from '@/lib/utility-store'
+import { useUtilityStore, isUrl } from '@/lib/utility-store'
 import { usePaymentStore } from '@/lib/payment-store'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -20,19 +20,51 @@ import {
   ExternalLink,
   RefreshCw,
   FileText,
+  Link2,
+  MessageCircle,
+  Info,
 } from 'lucide-react'
+
+// ── Telegram mini icon for admin UI ──
+function TelegramMini() {
+  return (
+    <svg viewBox="0 0 24 24" className="size-4" fill="none">
+      <circle cx="12" cy="12" r="11" fill="#37AEE2" />
+      <path
+        d="M5.5 11.8l11-4.25c.5-.18.94.12.78.87l0 0-1.87 8.81c-.13.58-.47.72-.96.45l-2.65-1.95-1.28 1.23c-.14.14-.26.26-.53.26l.19-2.7 4.92-4.44c.21-.19-.05-.3-.33-.11l-6.08 3.82-2.62-.82c-.57-.18-.58-.57.12-.84l10.24-3.95c.47-.17.89.12.73.84l-1.75 8.22c-.12.56-.45.7-.91.43l-2.53-1.87-1.22 1.18c-.14.14-.25.25-.52.25l.18-2.68"
+        fill="white"
+      />
+    </svg>
+  )
+}
+
+// ── Facebook mini icon for admin UI ──
+function FacebookMini() {
+  return (
+    <svg viewBox="0 0 24 24" className="size-4" fill="none">
+      <circle cx="12" cy="12" r="11" fill="#1877F2" />
+      <path
+        d="M16.5 13l.5-3h-3V8c0-.83.4-1.5 1.68-1.5H17V3.86c-.5-.07-1.37-.22-2.32-.22C13.38 3.64 12 4.83 12 7.2V10H9v3h3v7h3.5v-7h2z"
+        fill="white"
+      />
+    </svg>
+  )
+}
 
 export function AdminUtility() {
   const { config, updateConfig } = useUtilityStore()
   const { paymentConfig, updatePaymentConfig } = usePaymentStore()
 
-  // Local state for editing
+  // Local state for editing — App config
   const [apkUrl, setApkUrl] = useState(config.apkDownloadUrl)
   const [apkVersion, setApkVersion] = useState(config.apkVersion)
   const [tutorialUrl, setTutorialUrl] = useState(config.tutorialUrl)
   const [tutorialTitle, setTutorialTitle] = useState(config.tutorialTitle)
   const [changelog, setChangelog] = useState(config.appChangelog)
+  const [telegramLink, setTelegramLink] = useState(config.telegramLink)
+  const [facebookLink, setFacebookLink] = useState(config.facebookLink)
 
+  // Local state for editing — Payment config
   const [bkashNumber, setBkashNumber] = useState(paymentConfig.bkashNumber)
   const [bkashType, setBkashType] = useState(paymentConfig.bkashType)
   const [nagadNumber, setNagadNumber] = useState(paymentConfig.nagadNumber)
@@ -45,6 +77,8 @@ export function AdminUtility() {
     setTutorialUrl(config.tutorialUrl)
     setTutorialTitle(config.tutorialTitle)
     setChangelog(config.appChangelog)
+    setTelegramLink(config.telegramLink)
+    setFacebookLink(config.facebookLink)
   }, [config])
 
   useEffect(() => {
@@ -67,6 +101,16 @@ export function AdminUtility() {
     })
   }
 
+  const handleSaveSocialConfig = () => {
+    updateConfig({
+      telegramLink,
+      facebookLink,
+    })
+    toast.success('Social links saved!', {
+      description: 'Telegram & Facebook links updated for users.',
+    })
+  }
+
   const handleSavePaymentConfig = () => {
     updatePaymentConfig({
       bkashNumber,
@@ -84,7 +128,7 @@ export function AdminUtility() {
       <div>
         <h2 className="text-2xl font-bold tracking-tight">Utility Settings</h2>
         <p className="text-muted-foreground text-sm mt-1">
-          Manage app download links, tutorials, and payment method configurations
+          Manage app download links, social links, and payment method configurations
         </p>
       </div>
 
@@ -201,6 +245,92 @@ export function AdminUtility() {
                 </a>
               )}
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ── Social Links Configuration ── */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Link2 className="size-5" />
+            Social Links
+          </CardTitle>
+          <CardDescription>
+            Configure Telegram &amp; Facebook links shown across the website
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          {/* Info box */}
+          <div className="flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2.5">
+            <Info className="size-4 text-primary mt-0.5 shrink-0" />
+            <div className="text-xs text-muted-foreground space-y-1">
+              <p><strong>URL mode:</strong> Enter a link (e.g. <code className="bg-muted px-1 rounded text-[10px]">https://t.me/corex</code>) — clicking the icon opens the link directly.</p>
+              <p><strong>Text mode:</strong> Enter any text (e.g. <code className="bg-muted px-1 rounded text-[10px]">Coming Soon</code>) — clicking the icon shows a popup with that text.</p>
+            </div>
+          </div>
+
+          {/* Telegram */}
+          <div className="rounded-lg border p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="flex size-8 items-center justify-center rounded-md bg-[#37AEE2]/15">
+                <TelegramMini />
+              </div>
+              <h3 className="text-sm font-semibold">Telegram</h3>
+              <Badge variant="outline" className="text-xs">
+                {isUrl(telegramLink) ? '🔗 Link' : '💬 Text'}
+              </Badge>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">
+                Telegram Link or Status Text
+              </label>
+              <Input
+                placeholder="https://t.me/corex or Coming Soon"
+                value={telegramLink}
+                onChange={(e) => setTelegramLink(e.target.value)}
+              />
+              <p className="text-[11px] text-muted-foreground">
+                {isUrl(telegramLink)
+                  ? '✅ URL detected — users will be redirected to this link'
+                  : 'ℹ️ Text mode — users will see a popup with this message'}
+              </p>
+            </div>
+          </div>
+
+          {/* Facebook */}
+          <div className="rounded-lg border p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="flex size-8 items-center justify-center rounded-md bg-[#1877F2]/15">
+                <FacebookMini />
+              </div>
+              <h3 className="text-sm font-semibold">Facebook</h3>
+              <Badge variant="outline" className="text-xs">
+                {isUrl(facebookLink) ? '🔗 Link' : '💬 Text'}
+              </Badge>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">
+                Facebook Link or Status Text
+              </label>
+              <Input
+                placeholder="https://facebook.com/corex or Coming Soon"
+                value={facebookLink}
+                onChange={(e) => setFacebookLink(e.target.value)}
+              />
+              <p className="text-[11px] text-muted-foreground">
+                {isUrl(facebookLink)
+                  ? '✅ URL detected — users will be redirected to this link'
+                  : 'ℹ️ Text mode — users will see a popup with this message'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 pt-2">
+            <Button onClick={handleSaveSocialConfig} className="gap-1.5">
+              <Save className="size-4" />
+              Save Social Links
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -324,30 +454,63 @@ export function AdminUtility() {
             User Preview
           </CardTitle>
           <CardDescription>
-            How users will see the payment information
+            How users will see social links and payment information
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-lg border bg-muted/20 p-3 space-y-1.5">
-              <div className="flex items-center gap-2">
-                <svg viewBox="0 0 80 24" className="h-5" fill="none">
-                  <rect width="80" height="24" rx="4" fill="#E2136E" />
-                  <text x="8" y="17" fontFamily="Arial" fontWeight="700" fontSize="12" fill="white">bKash</text>
-                </svg>
-                <Badge variant="outline" className="text-[10px]">{bkashType}</Badge>
+        <CardContent className="space-y-4">
+          {/* Social Preview */}
+          <div>
+            <p className="text-xs font-medium text-muted-foreground mb-2">Social Links</p>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 rounded-lg border bg-muted/20 px-3 py-2">
+                <div className="flex size-5 items-center justify-center rounded-full bg-[#37AEE2]">
+                  <svg viewBox="0 0 24 24" className="size-3" fill="white">
+                    <path d="M9 17l1-4 7-6.5c.4-.4.1-.7-.4-.4L7.5 13l-3.8-1.2c-.8-.2-.8-.8.2-1.2l14.5-5.6c.7-.3 1.3.2 1 1.2l-2.5 11.7c-.2.8-.7 1-1.2.6l-3-2.2-1.7 1.6c-.2.2-.4.3-.6.3l.3-2.5z" />
+                  </svg>
+                </div>
+                <span className="text-xs font-medium">Telegram</span>
+                {!isUrl(telegramLink) && (
+                  <Badge className="bg-amber-500/15 text-amber-400 border-amber-500/30 text-[9px] px-1">Soon</Badge>
+                )}
               </div>
-              <p className="font-mono text-sm font-bold">{bkashNumber}</p>
+              <div className="flex items-center gap-2 rounded-lg border bg-muted/20 px-3 py-2">
+                <div className="flex size-5 items-center justify-center rounded-full bg-[#1877F2]">
+                  <svg viewBox="0 0 24 24" className="size-3" fill="white">
+                    <path d="M16.5 13l.5-3h-3V8c0-.83.4-1.5 1.68-1.5H17V3.86c-.5-.07-1.37-.22-2.32-.22C13.38 3.64 12 4.83 12 7.2V10H9v3h3v7h3.5v-7h2z" />
+                  </svg>
+                </div>
+                <span className="text-xs font-medium">Facebook</span>
+                {!isUrl(facebookLink) && (
+                  <Badge className="bg-amber-500/15 text-amber-400 border-amber-500/30 text-[9px] px-1">Soon</Badge>
+                )}
+              </div>
             </div>
-            <div className="rounded-lg border bg-muted/20 p-3 space-y-1.5">
-              <div className="flex items-center gap-2">
-                <svg viewBox="0 0 80 24" className="h-5" fill="none">
-                  <rect width="80" height="24" rx="4" fill="#F6921E" />
-                  <text x="8" y="17" fontFamily="Arial" fontWeight="700" fontSize="12" fill="white">Nagad</text>
-                </svg>
-                <Badge variant="outline" className="text-[10px]">{nagadType}</Badge>
+          </div>
+
+          {/* Payment Preview */}
+          <div>
+            <p className="text-xs font-medium text-muted-foreground mb-2">Payment Methods</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-lg border bg-muted/20 p-3 space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <svg viewBox="0 0 80 24" className="h-5" fill="none">
+                    <rect width="80" height="24" rx="4" fill="#E2136E" />
+                    <text x="8" y="17" fontFamily="Arial" fontWeight="700" fontSize="12" fill="white">bKash</text>
+                  </svg>
+                  <Badge variant="outline" className="text-[10px]">{bkashType}</Badge>
+                </div>
+                <p className="font-mono text-sm font-bold">{bkashNumber}</p>
               </div>
-              <p className="font-mono text-sm font-bold">{nagadNumber}</p>
+              <div className="rounded-lg border bg-muted/20 p-3 space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <svg viewBox="0 0 80 24" className="h-5" fill="none">
+                    <rect width="80" height="24" rx="4" fill="#F6921E" />
+                    <text x="8" y="17" fontFamily="Arial" fontWeight="700" fontSize="12" fill="white">Nagad</text>
+                  </svg>
+                  <Badge variant="outline" className="text-[10px]">{nagadType}</Badge>
+                </div>
+                <p className="font-mono text-sm font-bold">{nagadNumber}</p>
+              </div>
             </div>
           </div>
         </CardContent>

@@ -6,6 +6,8 @@ export interface UtilityConfig {
   tutorialUrl: string
   tutorialTitle: string
   appChangelog: string
+  telegramLink: string
+  facebookLink: string
 }
 
 interface UtilityState {
@@ -20,6 +22,8 @@ export const useUtilityStore = create<UtilityState>((set) => ({
     tutorialUrl: 'https://corex.io/tutorial/getting-started',
     tutorialTitle: 'Getting Started with CoreX',
     appChangelog: '• Fixed connection stability\n• Added WireGuard protocol\n• Improved load balancing\n• Dark mode improvements',
+    telegramLink: 'Coming Soon',
+    facebookLink: 'Coming Soon',
   },
 
   updateConfig: (partial) => {
@@ -28,3 +32,11 @@ export const useUtilityStore = create<UtilityState>((set) => ({
     }))
   },
 }))
+
+/**
+ * Check if a value is a valid URL (starts with http:// or https://)
+ * If not a URL, it's treated as display text (e.g. "Coming Soon")
+ */
+export function isUrl(value: string): boolean {
+  return /^https?:\/\//i.test(value.trim())
+}

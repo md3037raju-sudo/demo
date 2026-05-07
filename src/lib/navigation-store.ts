@@ -11,6 +11,7 @@ export type Page =
   | 'dashboard/referrals'
   | 'dashboard/themes'
   | 'dashboard/settings'
+  | 'dashboard/tickets'
   | 'download'
   | 'docs'
   | 'admin'
@@ -46,7 +47,7 @@ const allValidPages: Page[] = [
   'landing', 'login', 'about', 'dashboard',
   'dashboard/subscriptions', 'dashboard/activedevices',
   'dashboard/payments', 'dashboard/referrals',
-  'dashboard/themes', 'dashboard/settings',
+  'dashboard/themes', 'dashboard/settings', 'dashboard/tickets',
   'download', 'docs',
   'admin', 'admin/users', 'admin/subscriptions',
   'admin/proxiespreset', 'admin/plans', 'admin/payments',

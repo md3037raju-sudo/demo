@@ -37,6 +37,7 @@ import {
 import { ThemeToggle } from '@/components/shared/theme-toggle'
 import { AnimateIn } from '@/components/shared/animate-in'
 import { CoreXLogo, CoreXLogoIcon } from '@/components/shared/corex-logo'
+import { SocialLinks } from '@/components/shared/social-links'
 
 export function LandingPage() {
   const navigate = useNavigationStore((s) => s.navigate)
@@ -471,10 +472,13 @@ export function LandingPage() {
               &copy; 2025 CoreX. All rights reserved.
             </p>
             <div className="flex items-center gap-4">
-              <Globe className="size-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">
-                Available worldwide
-              </span>
+              <SocialLinks iconSize={18} />
+              <div className="flex items-center gap-2">
+                <Globe className="size-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">
+                  Available worldwide
+                </span>
+              </div>
             </div>
           </div>
         </div>

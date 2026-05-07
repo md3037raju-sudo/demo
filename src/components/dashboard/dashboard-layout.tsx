@@ -34,6 +34,7 @@ import {
   Menu,
   Shield,
   Palette,
+  MessageSquare,
 } from 'lucide-react'
 import { ThemeToggle } from '@/components/shared/theme-toggle'
 import { AnimateIn } from '@/components/shared/animate-in'
@@ -45,6 +46,7 @@ import { PaymentsPage } from './payments-page'
 import { ReferralsPage } from './referrals-page'
 import { SettingsPage } from './settings-page'
 import { ThemePage } from './theme-page'
+import { UserTicketsPage } from './user-tickets-page'
 
 interface NavItem {
   label: string
@@ -59,6 +61,7 @@ const mainNavItems: NavItem[] = [
   { label: 'Payments', icon: Wallet, page: 'dashboard/payments' },
   { label: 'Referrals', icon: Users, page: 'dashboard/referrals' },
   { label: 'Themes', icon: Palette, page: 'dashboard/themes' },
+  { label: 'Tickets', icon: MessageSquare, page: 'dashboard/tickets' },
   { label: 'Settings', icon: Settings, page: 'dashboard/settings' },
 ]
 
@@ -81,6 +84,8 @@ function getPageTitle(page: string): string {
       return 'Referrals'
     case 'dashboard/themes':
       return 'Themes'
+    case 'dashboard/tickets':
+      return 'Support Tickets'
     case 'dashboard/settings':
       return 'Settings'
     default:
@@ -102,6 +107,8 @@ function renderPage(page: string) {
       return <AnimateIn type="slide-up" key="referrals"><ReferralsPage /></AnimateIn>
     case 'dashboard/themes':
       return <AnimateIn type="slide-up" key="themes"><ThemePage /></AnimateIn>
+    case 'dashboard/tickets':
+      return <AnimateIn type="slide-up" key="tickets"><UserTicketsPage /></AnimateIn>
     case 'dashboard/settings':
       return <AnimateIn type="slide-up" key="settings"><SettingsPage /></AnimateIn>
     default:
