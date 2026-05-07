@@ -1,6 +1,6 @@
 'use client'
 
-import { Shield, ArrowLeft } from 'lucide-react'
+import { Shield, ArrowLeft, KeyRound } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -42,9 +42,16 @@ export function LoginPage() {
   const navigate = useNavigationStore((s) => s.navigate)
   const login = useAuthStore((s) => s.login)
 
+  const loginAsAdmin = useAuthStore((s) => s.loginAsAdmin)
+
   const handleLogin = (provider: 'google' | 'telegram') => {
     login(provider)
     navigate('dashboard')
+  }
+
+  const handleAdminLogin = () => {
+    loginAsAdmin()
+    navigate('admin')
   }
 
   return (
@@ -121,6 +128,20 @@ export function LoginPage() {
               Privacy Policy
             </span>
           </p>
+
+          {/* Admin Login (Dev/Testing) */}
+          <Separator className="opacity-50" />
+          <div className="text-center">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-2 text-muted-foreground hover:text-primary"
+              onClick={handleAdminLogin}
+            >
+              <KeyRound className="size-3.5" />
+              Admin Access
+            </Button>
+          </div>
         </CardContent>
       </Card>
 

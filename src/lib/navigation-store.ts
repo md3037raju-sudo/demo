@@ -12,6 +12,19 @@ export type Page =
   | 'dashboard/settings'
   | 'download'
   | 'docs'
+  | 'admin'
+  | 'admin/users'
+  | 'admin/subscriptions'
+  | 'admin/proxiespreset'
+  | 'admin/plans'
+  | 'admin/payments'
+  | 'admin/rules'
+  | 'admin/logs'
+  | 'admin/devices'
+  | 'admin/db-init'
+  | 'admin/broadcast'
+  | 'admin/tickets'
+  | 'admin/cms'
 
 interface NavigationState {
   currentPage: Page
@@ -26,30 +39,27 @@ export const useNavigationStore = create<NavigationState>((set) => ({
   },
 }))
 
+const allValidPages: Page[] = [
+  'landing', 'login', 'about', 'dashboard',
+  'dashboard/subscriptions', 'dashboard/activedevices',
+  'dashboard/payments', 'dashboard/referrals',
+  'dashboard/settings', 'download', 'docs',
+  'admin', 'admin/users', 'admin/subscriptions',
+  'admin/proxiespreset', 'admin/plans', 'admin/payments',
+  'admin/rules', 'admin/logs', 'admin/devices',
+  'admin/db-init', 'admin/broadcast', 'admin/tickets', 'admin/cms'
+]
+
 // Sync hash to store on load
 if (typeof window !== 'undefined') {
   const hash = window.location.hash.slice(1)
-  if (hash) {
-    const validPages: Page[] = [
-      'landing', 'login', 'about', 'dashboard',
-      'dashboard/subscriptions', 'dashboard/activedevices',
-      'dashboard/payments', 'dashboard/referrals',
-      'dashboard/settings', 'download', 'docs'
-    ]
-    if (validPages.includes(hash as Page)) {
-      useNavigationStore.setState({ currentPage: hash as Page })
-    }
+  if (hash && allValidPages.includes(hash as Page)) {
+    useNavigationStore.setState({ currentPage: hash as Page })
   }
 
   window.addEventListener('hashchange', () => {
     const hash = window.location.hash.slice(1) as Page
-    const validPages: Page[] = [
-      'landing', 'login', 'about', 'dashboard',
-      'dashboard/subscriptions', 'dashboard/activedevices',
-      'dashboard/payments', 'dashboard/referrals',
-      'dashboard/settings', 'download', 'docs'
-    ]
-    if (validPages.includes(hash)) {
+    if (allValidPages.includes(hash)) {
       useNavigationStore.setState({ currentPage: hash })
     }
   })

@@ -5,6 +5,7 @@ import { useNavigationStore, type Page } from '@/lib/navigation-store'
 import { useAuthStore } from '@/lib/auth-store'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -23,23 +24,37 @@ import {
 } from '@/components/ui/dropdown-menu'
 import {
   LayoutDashboard,
-  CreditCard,
-  Smartphone,
-  Wallet,
   Users,
-  Settings,
-  Download,
-  FileText,
+  CreditCard,
+  Globe,
+  Package,
+  Wallet,
+  ShieldAlert,
+  ScrollText,
+  Smartphone,
+  Database,
+  Megaphone,
+  MessageSquare,
+  FileEdit,
   LogOut,
   Menu,
   Shield,
+  Settings,
+  ArrowLeft,
 } from 'lucide-react'
-import { OverviewPage } from './overview-page'
-import { SubscriptionsPage } from './subscriptions-page'
-import { ActiveDevicesPage } from './active-devices-page'
-import { PaymentsPage } from './payments-page'
-import { ReferralsPage } from './referrals-page'
-import { SettingsPage } from './settings-page'
+import { AdminDashboard } from './admin-dashboard'
+import { AdminUsers } from './admin-users'
+import { AdminSubscriptions } from './admin-subscriptions'
+import { AdminProxiesPreset } from './admin-proxies-preset'
+import { AdminPlans } from './admin-plans'
+import { AdminPayments } from './admin-payments'
+import { AdminRules } from './admin-rules'
+import { AdminLogs } from './admin-logs'
+import { AdminDevices } from './admin-devices'
+import { AdminDbInitPage as AdminDbInit } from './admin-db-init'
+import { AdminBroadcastPage as AdminBroadcast } from './admin-broadcast'
+import { AdminTicketsPage as AdminTickets } from './admin-tickets'
+import { AdminCmsPage as AdminCMS } from './admin-cms'
 
 interface NavItem {
   label: string
@@ -48,54 +63,87 @@ interface NavItem {
 }
 
 const mainNavItems: NavItem[] = [
-  { label: 'Overview', icon: LayoutDashboard, page: 'dashboard' },
-  { label: 'Subscriptions', icon: CreditCard, page: 'dashboard/subscriptions' },
-  { label: 'Active Devices', icon: Smartphone, page: 'dashboard/activedevices' },
-  { label: 'Payments', icon: Wallet, page: 'dashboard/payments' },
-  { label: 'Referrals', icon: Users, page: 'dashboard/referrals' },
-  { label: 'Settings', icon: Settings, page: 'dashboard/settings' },
+  { label: 'Dashboard', icon: LayoutDashboard, page: 'admin' },
+  { label: 'Users', icon: Users, page: 'admin/users' },
+  { label: 'Subscriptions', icon: CreditCard, page: 'admin/subscriptions' },
+  { label: 'Proxy Presets', icon: Globe, page: 'admin/proxiespreset' },
+  { label: 'Plans', icon: Package, page: 'admin/plans' },
+  { label: 'Payments', icon: Wallet, page: 'admin/payments' },
+  { label: 'Rules', icon: ShieldAlert, page: 'admin/rules' },
+  { label: 'Logs', icon: ScrollText, page: 'admin/logs' },
+  { label: 'Devices', icon: Smartphone, page: 'admin/devices' },
+  { label: 'DB Init', icon: Database, page: 'admin/db-init' },
 ]
 
-const extraNavItems: NavItem[] = [
-  { label: 'Download', icon: Download, page: 'download' },
-  { label: 'Docs', icon: FileText, page: 'docs' },
+const secondaryNavItems: NavItem[] = [
+  { label: 'Broadcast', icon: Megaphone, page: 'admin/broadcast' },
+  { label: 'Tickets', icon: MessageSquare, page: 'admin/tickets' },
+  { label: 'CMS', icon: FileEdit, page: 'admin/cms' },
 ]
 
 function getPageTitle(page: string): string {
   switch (page) {
-    case 'dashboard':
-      return 'Overview'
-    case 'dashboard/subscriptions':
-      return 'Subscription History'
-    case 'dashboard/activedevices':
-      return 'Active Devices'
-    case 'dashboard/payments':
-      return 'Payments'
-    case 'dashboard/referrals':
-      return 'Referrals'
-    case 'dashboard/settings':
-      return 'Settings'
-    default:
+    case 'admin':
       return 'Dashboard'
+    case 'admin/users':
+      return 'User Management'
+    case 'admin/subscriptions':
+      return 'Subscription Management'
+    case 'admin/proxiespreset':
+      return 'Proxy Presets'
+    case 'admin/plans':
+      return 'Plan Management'
+    case 'admin/payments':
+      return 'Payment Management'
+    case 'admin/rules':
+      return 'Rules & Configuration'
+    case 'admin/logs':
+      return 'Activity Logs'
+    case 'admin/devices':
+      return 'Device Management'
+    case 'admin/db-init':
+      return 'Database Initialization'
+    case 'admin/broadcast':
+      return 'Broadcast Messages'
+    case 'admin/tickets':
+      return 'Support Tickets'
+    case 'admin/cms':
+      return 'CMS Management'
+    default:
+      return 'Admin Panel'
   }
 }
 
-function renderPage(page: string) {
+function renderAdminPage(page: string) {
   switch (page) {
-    case 'dashboard':
-      return <OverviewPage />
-    case 'dashboard/subscriptions':
-      return <SubscriptionsPage />
-    case 'dashboard/activedevices':
-      return <ActiveDevicesPage />
-    case 'dashboard/payments':
-      return <PaymentsPage />
-    case 'dashboard/referrals':
-      return <ReferralsPage />
-    case 'dashboard/settings':
-      return <SettingsPage />
+    case 'admin':
+      return <AdminDashboard />
+    case 'admin/users':
+      return <AdminUsers />
+    case 'admin/subscriptions':
+      return <AdminSubscriptions />
+    case 'admin/proxiespreset':
+      return <AdminProxiesPreset />
+    case 'admin/plans':
+      return <AdminPlans />
+    case 'admin/payments':
+      return <AdminPayments />
+    case 'admin/rules':
+      return <AdminRules />
+    case 'admin/logs':
+      return <AdminLogs />
+    case 'admin/devices':
+      return <AdminDevices />
+    case 'admin/db-init':
+      return <AdminDbInit />
+    case 'admin/broadcast':
+      return <AdminBroadcast />
+    case 'admin/tickets':
+      return <AdminTickets />
+    case 'admin/cms':
+      return <AdminCMS />
     default:
-      return <OverviewPage />
+      return <AdminDashboard />
   }
 }
 
@@ -114,6 +162,11 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
     onNavigate?.()
   }
 
+  const handleBackToDashboard = () => {
+    navigate('dashboard')
+    onNavigate?.()
+  }
+
   const getInitials = (name: string) => {
     return name
       .split(' ')
@@ -129,7 +182,8 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         <div className="flex size-8 items-center justify-center rounded-lg bg-primary">
           <Shield className="size-5 text-primary-foreground" />
         </div>
-        <span className="text-lg font-bold tracking-tight">CoreX</span>
+        <span className="text-lg font-bold tracking-tight">CoreX Admin</span>
+        <Badge className="ml-auto bg-red-500/20 text-red-400 border-red-500/30 text-xs">Admin</Badge>
       </div>
 
       <Separator />
@@ -145,7 +199,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                 variant={isActive ? 'secondary' : 'ghost'}
                 className={`w-full justify-start gap-3 ${
                   isActive
-                    ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
+                    ? 'bg-primary text-primary-foreground font-medium'
                     : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50'
                 }`}
                 onClick={() => handleNavigate(item.page)}
@@ -160,12 +214,17 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         <Separator className="my-3" />
 
         <nav className="flex flex-col gap-1">
-          {extraNavItems.map((item) => {
+          {secondaryNavItems.map((item) => {
+            const isActive = currentPage === item.page
             return (
               <Button
                 key={item.page}
-                variant="ghost"
-                className="w-full justify-start gap-3 text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
+                variant={isActive ? 'secondary' : 'ghost'}
+                className={`w-full justify-start gap-3 ${
+                  isActive
+                    ? 'bg-primary text-primary-foreground font-medium'
+                    : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50'
+                }`}
                 onClick={() => handleNavigate(item.page)}
               >
                 <item.icon className="size-4" />
@@ -174,63 +233,59 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             )
           })}
         </nav>
-
-        {/* Admin Access (visible only for admins) */}
-        {user?.role === 'admin' && (
-          <>
-            <Separator className="my-3" />
-            <nav className="flex flex-col gap-1">
-              <Button
-                variant="ghost"
-                className="w-full justify-start gap-3 text-red-400/80 hover:text-red-400 hover:bg-red-500/10"
-                onClick={() => handleNavigate('admin')}
-              >
-                <Shield className="size-4" />
-                Admin Panel
-              </Button>
-            </nav>
-          </>
-        )}
       </ScrollArea>
 
       {/* User section */}
       <Separator />
-      <div className="flex items-center gap-3 p-4">
-        <Avatar className="size-9">
-          <AvatarFallback className="bg-primary/20 text-primary text-sm">
-            {user ? getInitials(user.name) : 'U'}
-          </AvatarFallback>
-        </Avatar>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium truncate">{user?.name}</p>
-          <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+      <div className="p-4 space-y-3">
+        <div className="flex items-center gap-3">
+          <Avatar className="size-9">
+            <AvatarFallback className="bg-primary/20 text-primary text-sm">
+              {user ? getInitials(user.name) : 'A'}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate">{user?.name}</p>
+            <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+          </div>
         </div>
         <Button
+          variant="outline"
+          size="sm"
+          className="w-full justify-start gap-2 text-xs"
+          onClick={handleBackToDashboard}
+        >
+          <ArrowLeft className="size-3.5" />
+          Back to User Dashboard
+        </Button>
+        <Button
           variant="ghost"
-          size="icon"
-          className="size-8 text-muted-foreground hover:text-destructive"
+          size="sm"
+          className="w-full justify-start gap-2 text-xs text-muted-foreground hover:text-destructive"
           onClick={handleLogout}
         >
-          <LogOut className="size-4" />
+          <LogOut className="size-3.5" />
+          Sign out
         </Button>
       </div>
     </div>
   )
 }
 
-export function DashboardLayout() {
+export function AdminLayout() {
   const { isAuthenticated, user, logout } = useAuthStore()
   const { currentPage, navigate } = useNavigationStore()
   const isMobile = useIsMobile()
   const [sheetOpen, setSheetOpen] = React.useState(false)
 
+  // Auth guard: redirect if not authenticated or not admin
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || (user && user.role !== 'admin')) {
       navigate('login')
     }
-  }, [isAuthenticated, navigate])
+  }, [isAuthenticated, user, navigate])
 
-  if (!isAuthenticated || !user) {
+  if (!isAuthenticated || !user || user.role !== 'admin') {
     return null
   }
 
@@ -277,6 +332,7 @@ export function DashboardLayout() {
           )}
 
           <h1 className="text-lg font-semibold">{getPageTitle(currentPage)}</h1>
+          <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-[10px]">Admin</Badge>
 
           <div className="ml-auto flex items-center gap-2">
             <DropdownMenu>
@@ -302,6 +358,10 @@ export function DashboardLayout() {
                   </div>
                 </div>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate('dashboard')}>
+                  <ArrowLeft className="mr-2 size-4" />
+                  Back to User Dashboard
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate('dashboard/settings')}>
                   <Settings className="mr-2 size-4" />
                   Settings
@@ -318,7 +378,7 @@ export function DashboardLayout() {
 
         {/* Page Content */}
         <main className="flex-1 overflow-y-auto p-4 md:p-6">
-          {renderPage(currentPage)}
+          {renderAdminPage(currentPage)}
         </main>
       </div>
     </div>
