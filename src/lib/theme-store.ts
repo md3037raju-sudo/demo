@@ -32,15 +32,46 @@ function applyThemeToDOM(mode: ThemeMode, preset: ThemePreset, animationsEnabled
   root.classList.toggle('animate-enabled', animationsEnabled)
 }
 
+// Read saved theme from localStorage
+function getSavedTheme(): { mode: ThemeMode; preset: ThemePreset; animationsEnabled: boolean } {
+  if (typeof window === 'undefined') return { mode: 'dark', preset: 'emerald', animationsEnabled: false }
+  try {
+    const saved = localStorage.getItem('corex-theme')
+    if (saved) {
+      const parsed = JSON.parse(saved)
+      return {
+        mode: parsed.mode || 'dark',
+        preset: parsed.preset || 'emerald',
+        animationsEnabled: parsed.animationsEnabled ?? false,
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return { mode: 'dark', preset: 'emerald', animationsEnabled: false }
+}
+
+function saveTheme(mode: ThemeMode, preset: ThemePreset, animationsEnabled: boolean) {
+  if (typeof window === 'undefined') return
+  try {
+    localStorage.setItem('corex-theme', JSON.stringify({ mode, preset, animationsEnabled }))
+  } catch {
+    // ignore
+  }
+}
+
+const initial = getSavedTheme()
+
 export const useThemeStore = create<ThemeState>((set, get) => ({
-  mode: 'dark',
-  preset: 'emerald',
-  animationsEnabled: false,
+  mode: initial.mode,
+  preset: initial.preset,
+  animationsEnabled: initial.animationsEnabled,
 
   setMode: (mode) => {
     set({ mode })
     const state = get()
     applyThemeToDOM(mode, state.preset, state.animationsEnabled)
+    saveTheme(mode, state.preset, state.animationsEnabled)
   },
 
   toggleMode: () => {
@@ -48,18 +79,21 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
     set({ mode: newMode })
     const state = get()
     applyThemeToDOM(newMode, state.preset, state.animationsEnabled)
+    saveTheme(newMode, state.preset, state.animationsEnabled)
   },
 
   setPreset: (preset) => {
     set({ preset })
     const state = get()
     applyThemeToDOM(state.mode, preset, state.animationsEnabled)
+    saveTheme(state.mode, preset, state.animationsEnabled)
   },
 
   setAnimationsEnabled: (enabled) => {
     set({ animationsEnabled: enabled })
     const state = get()
     applyThemeToDOM(state.mode, state.preset, enabled)
+    saveTheme(state.mode, state.preset, enabled)
   },
 }))
 

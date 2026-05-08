@@ -38,3 +38,20 @@ Stage Summary:
 - 2FA Settings accessible from Utility page
 - Existing users can login even when registration is paused
 - Admin subscriptions use proper store actions for persistence
+
+---
+Task ID: audit-1
+Agent: Sub-agent (general-purpose)
+Task: Comprehensive bug audit of CoreX codebase
+
+Work Log:
+- Read all key source files: stores, pages, dashboard, admin, shared components, API routes, hooks
+- Audited mobile/touch issues, Google OAuth, functional bugs, UI/UX, and Supabase integration
+- Identified 27 bugs across all severity levels
+
+Stage Summary:
+- CRITICAL: 5 bugs found (mobile click issues, mock auth, no auth guards, referral hardcoded, API security)
+- HIGH: 8 bugs found (race conditions, theme persistence, referral rewards, withdrawal no-op, etc.)
+- MEDIUM: 9 bugs found (small touch targets, missing validation, animation-on-mobile, etc.)
+- LOW: 5 bugs found (minor UX issues, duplicate code, etc.)
+- See detailed bug report below

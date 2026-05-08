@@ -317,15 +317,23 @@
 
 /* ===== Animation System ===== */
 
-/* ── When animations are OFF: kill all transitions/animations instantly ── */
-:not(.animate-enabled) * {
-  transition-duration: 0ms !important;
-  animation-duration: 0ms !important;
-  animation-delay: 0ms !important;
+/* ── Touch action: prevent double-tap zoom on mobile ── */
+button, a, [role="button"], [data-slot="button"] {
+  touch-action: manipulation;
 }
 
-/* ── When animations are ON: global smooth transitions ── */
-.animate-enabled * {
+/* ── When animations are OFF: only kill decorative transitions, NOT functional ones ── */
+:root:not(.animate-enabled) .card-hover,
+:root:not(.animate-enabled) .animate-fade-in,
+:root:not(.animate-enabled) .animate-slide-up {
+  transition-duration: 0ms !important;
+  animation-duration: 0ms !important;
+}
+
+/* ── When animations are ON: scoped smooth transitions ── */
+.animate-enabled [data-slot="card"],
+.animate-enabled [data-slot="badge"],
+.animate-enabled .card-hover {
   transition-property: color, background-color, border-color, box-shadow, opacity;
   transition-duration: 200ms;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
@@ -334,15 +342,17 @@
 /* ── Hover effects on interactive elements ── */
 .animate-enabled button:not(:disabled) {
   transition-property: color, background-color, border-color, box-shadow, transform, opacity;
-  transition-duration: 200ms;
+  transition-duration: 150ms;
 }
 
-.animate-enabled button:not(:disabled):hover {
-  transform: translateY(-1px);
+@media (hover: hover) {
+  .animate-enabled button:not(:disabled):hover {
+    transform: translateY(-1px);
+  }
 }
 
 .animate-enabled button:not(:disabled):active {
-  transform: translateY(0) scale(0.98);
+  transform: scale(0.98);
 }
 
 /* ── Card hover & entrance ── */

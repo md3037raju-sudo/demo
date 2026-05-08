@@ -46,7 +46,7 @@ export function LandingPage() {
 
   const navLinks = [
     { label: 'About', page: 'about' as const },
-    { label: 'Pricing', page: 'about' as const },
+    { label: 'Pricing', page: 'landing' as const },
     { label: 'Docs', page: 'docs' as const },
   ]
 

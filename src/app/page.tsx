@@ -13,6 +13,7 @@ import { DocsPage } from '@/components/pages/docs-page'
 export default function Home() {
   const currentPage = useNavigationStore((s) => s.currentPage)
   const user = useAuthStore((s) => s.user)
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
 
   // Admin pages (role-guarded)
   if (currentPage.startsWith('admin')) {
@@ -25,10 +26,17 @@ export default function Home() {
   if (currentPage === 'login') return <LoginPage />
   if (currentPage === 'about') return <AboutPage />
 
-  // Auth-only pages
-  if (currentPage === 'download') return <DownloadPage />
-  if (currentPage === 'docs') return <DocsPage />
+  // Auth-only pages — must be logged in
+  if (currentPage === 'download') {
+    if (!isAuthenticated) return <LoginPage />
+    return <DownloadPage />
+  }
+  if (currentPage === 'docs') {
+    if (!isAuthenticated) return <LoginPage />
+    return <DocsPage />
+  }
 
   // User dashboard pages (all wrapped in dashboard layout)
+  if (!isAuthenticated) return <LoginPage />
   return <DashboardLayout />
 }

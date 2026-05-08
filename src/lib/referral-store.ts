@@ -8,6 +8,7 @@ import {
   snakeToCamelObj,
   camelToSnakeObj,
 } from '@/lib/supabase-sync'
+import { addBalanceToUser } from './auth-store'
 
 export interface ReferralEntry {
   id: string
@@ -253,14 +254,11 @@ export const useReferralStore = create<ReferralState>((set, get) => ({
       return { success: false, error: 'You have already used a referral code' }
     }
 
-    // Find the referrer by code
-    const codeToReferrer: Record<string, { id: string; name: string }> = {
-      'COREX-7K9M2': { id: 'usr_cx_001', name: 'Alex Morgan' },
-      'SARAH-X4K7M': { id: 'usr_cx_002', name: 'Sarah Chen' },
-      'ADMIN-0001': { id: 'adm_cx_001', name: 'Admin CoreX' },
-    }
-
-    const referrer = codeToReferrer[code.toUpperCase()]
+    // Find the referrer by code — dynamic lookup from existing referral data
+    const existingReferral = state.referrals.find((r) => r.referralCode === code.toUpperCase())
+    const referrer = existingReferral
+      ? { id: existingReferral.referrerId, name: existingReferral.referrerName }
+      : null
     if (!referrer) {
       return { success: false, error: 'Invalid referral code' }
     }
@@ -286,6 +284,10 @@ export const useReferralStore = create<ReferralState>((set, get) => ({
     set((state) => ({
       referrals: [newReferral, ...state.referrals],
     }))
+
+    // Add rewards to both users' balances
+    addBalanceToUser(referrer.id, state.settings.referrerReward)
+    addBalanceToUser(newUserId, state.settings.referredReward)
 
     // Push to Supabase in background
     if (get().isSupabaseConnected) {
