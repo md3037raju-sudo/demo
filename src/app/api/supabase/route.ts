@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
     }
 
     const email = searchParams.get('email')
-    if (email) {
+    if (email && table === 'users') {
       query = query.eq('email', email)
     }
 

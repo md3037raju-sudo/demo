@@ -152,15 +152,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   login: (provider) => {
-    const role = provider === 'google' ? 'admin' as UserRole : 'user' as UserRole
-    const baseUser = role === 'admin' ? mockAdmin : mockUser
-    const user = { ...baseUser, provider }
+    // Always start as user — role should come from the database, not the provider.
+    // The admin dialog will be shown separately via the "Admin Access" button.
+    const baseUser = { ...mockUser, provider }
+    const user = { ...baseUser, role: 'user' as UserRole }
 
     const map = get().userBalanceMap
     const { user: updatedUser, updatedMap } = applyPendingBalance(user, map)
     set({ isAuthenticated: true, user: updatedUser, userBalanceMap: updatedMap })
 
-    // Background: try to fetch user from Supabase for real data
+    // Background: try to fetch user from Supabase for real data and role
     if (get().isSupabaseConnected) {
       fetchUserByEmail(user.email).then((supabaseUser) => {
         if (supabaseUser) {
@@ -175,7 +176,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }).catch(() => {})
     }
 
-    return role
+    return 'user' as UserRole
   },
 
   loginAsAdmin: () => {

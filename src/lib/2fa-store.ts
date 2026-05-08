@@ -136,7 +136,13 @@ export const use2FAStore = create<TwoFAState>((set, get) => ({
   // ── Write operations: update local state immediately, push to Supabase in background ──
 
   generateSecret: () => {
-    return 'JBSWY3DPEHPK3PXP'
+    // Generate a random Base32 secret for TOTP
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
+    let secret = ''
+    for (let i = 0; i < 16; i++) {
+      secret += chars.charAt(Math.floor(Math.random() * chars.length))
+    }
+    return secret
   },
 
   generateBackupCodes: () => {

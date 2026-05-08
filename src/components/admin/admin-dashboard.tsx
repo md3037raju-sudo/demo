@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { useNavigationStore, type Page } from '@/lib/navigation-store'
 import { mockActivityLogs, mockPlans, getDurationLabel } from '@/lib/mock-data'
 import { useReferralStore } from '@/lib/referral-store'
+import { useUserStore } from '@/lib/user-store'
 import {
   Users,
   CreditCard,
@@ -108,6 +109,7 @@ export function AdminDashboard() {
   const { navigate } = useNavigationStore()
   const recentLogs = mockActivityLogs.slice(0, 5)
   const { referrals } = useReferralStore()
+  const totalUsers = useUserStore((s) => s.users.length)
 
   const totalReferrals = referrals.length
   const totalRewardsGiven = referrals.reduce((sum, r) => sum + r.referrerReward + r.referredReward, 0)
@@ -143,7 +145,7 @@ export function AdminDashboard() {
             <div className="flex items-center justify-between">
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">Total Users</p>
-                <p className="text-3xl font-bold">7</p>
+                <p className="text-3xl font-bold">{totalUsers}</p>
                 <p className="text-xs text-emerald-500 flex items-center gap-1">
                   <TrendingUp className="size-3" />
                   +2 this week

@@ -90,42 +90,30 @@ export function LoginPage() {
           // NextAuth is redirecting — don't do anything else
           return
         }
-        // Fallback: mock login
-        const role = login(provider)
-        if (role === 'admin') {
-          setAdminDialogOpen(true)
-        } else {
-          if (!registrationEnabled) {
-            navigate('dashboard')
-          } else {
-            setReferralDialogOpen(true)
-          }
-        }
-      }).catch(() => {
-        setGoogleLoading(false)
-        // Fallback: mock login
-        const role = login(provider)
-        if (role === 'admin') {
-          setAdminDialogOpen(true)
-        } else {
-          if (!registrationEnabled) {
-            navigate('dashboard')
-          } else {
-            setReferralDialogOpen(true)
-          }
-        }
-      })
-    } else {
-      // Telegram always uses mock
-      const role = login(provider)
-      if (role === 'admin') {
-        setAdminDialogOpen(true)
-      } else {
+        // Fallback: mock login (always returns 'user' role)
+        login(provider)
         if (!registrationEnabled) {
           navigate('dashboard')
         } else {
           setReferralDialogOpen(true)
         }
+      }).catch(() => {
+        setGoogleLoading(false)
+        // Fallback: mock login (always returns 'user' role)
+        login(provider)
+        if (!registrationEnabled) {
+          navigate('dashboard')
+        } else {
+          setReferralDialogOpen(true)
+        }
+      })
+    } else {
+      // Telegram always uses mock
+      login(provider)
+      if (!registrationEnabled) {
+        navigate('dashboard')
+      } else {
+        setReferralDialogOpen(true)
       }
     }
   }, [login, registrationEnabled, navigate])

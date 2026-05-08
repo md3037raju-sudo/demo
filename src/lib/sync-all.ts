@@ -16,6 +16,8 @@ import { useCouponStore } from './coupon-store'
 import { useReferralStore } from './referral-store'
 import { useTicketStore } from './ticket-store'
 import { use2FAStore } from './2fa-store'
+import { usePlanStore } from './plan-store'
+import { useUserStore } from './user-store'
 
 let _synced = false
 let _syncing = false
@@ -40,6 +42,8 @@ export async function syncAllStores(): Promise<boolean> {
       useReferralStore.getState().syncWithSupabase(),
       useTicketStore.getState().syncWithSupabase(),
       use2FAStore.getState().syncWithSupabase(),
+      usePlanStore.getState().syncWithSupabase(),
+      useUserStore.getState().syncWithSupabase(),
     ])
 
     _synced = true

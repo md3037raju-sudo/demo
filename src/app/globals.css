@@ -338,12 +338,15 @@ html, body {
   }
 }
 
-/* ── Minimum touch target size (44px) ── */
-button, [role="button"], a {
+/* ── Minimum touch target size (44px) for primary interactive elements only ── */
+button:not([data-slot="dropdown-menu-item"]):not([data-slot="dropdown-menu-trigger"]):not([data-slot="context-menu-item"]):not([data-slot="menubar-item"]):not([data-slot="navigation-menu-item"]):not([data-slot="pagination-item"]):not([data-slot="select-item"]):not([data-slot="command-item"]):not([data-slot="popover-trigger"]),
+a:not([data-slot="breadcrumb-link"]):not([data-slot="breadcrumb-item"]) {
   min-height: 44px;
 }
 
-button[data-size="icon"], button.size-8, button.size-9 {
+button[data-size="icon"], button.size-8, button.size-9,
+button[data-slot="dropdown-menu-item"], button[data-slot="dropdown-menu-trigger"],
+button[data-slot="select-trigger"], button[data-slot="pagination-item"] {
   min-height: unset;
 }
 

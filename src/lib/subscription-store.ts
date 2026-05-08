@@ -1,5 +1,6 @@
 import { create } from 'zustand'
-import { mockSubscriptions, mockPlans, type PlanDuration, getDurationLabel, calculateDevicePrice } from './mock-data'
+import { mockSubscriptions, type PlanDuration, getDurationLabel, calculateDevicePrice } from './mock-data'
+import { usePlanStore } from './plan-store'
 import {
   fetchTable,
   insertRow,
@@ -98,9 +99,9 @@ export function getDaysBeforeVanish(expiryDate: string): number | null {
   return Math.ceil(diff / (1000 * 60 * 60 * 24))
 }
 
-/** Find the matching plan for a subscription by name */
+/** Find the matching plan for a subscription by name (from store, not mock) */
 export function findMatchingPlan(subName: string) {
-  return mockPlans.find((p) => p.name === subName && p.isActive) ?? null
+  return usePlanStore.getState().plans.find((p) => p.name === subName && p.isActive) ?? null
 }
 
 /** Calculate the renewal/extend price for a subscription (same plan, same devices) */
