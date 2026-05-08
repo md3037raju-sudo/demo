@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { Shield, ArrowLeft, KeyRound, UserCog, User, Lock, ArrowRight, Gift, SkipForward, AlertTriangle } from 'lucide-react'
+import { useState, useCallback } from 'react'
+import { Shield, ArrowLeft, KeyRound, UserCog, User, Lock, ArrowRight, Gift, SkipForward, AlertTriangle, Loader2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,6 +23,7 @@ import { useReferralStore } from '@/lib/referral-store'
 import { useUtilityStore } from '@/lib/utility-store'
 import { AnimateIn } from '@/components/shared/animate-in'
 import { CoreXLogo } from '@/components/shared/corex-logo'
+import { signInWithGoogle } from '@/lib/nextauth-client'
 
 function GoogleIcon() {
   return (
@@ -77,21 +78,57 @@ export function LoginPage() {
   const [referralError, setReferralError] = useState('')
   const [referralSuccess, setReferralSuccess] = useState(false)
 
-  const handleLogin = (provider: 'google' | 'telegram') => {
-    const role = login(provider)
-    if (role === 'admin') {
-      setAdminDialogOpen(true)
+  const [googleLoading, setGoogleLoading] = useState(false)
+
+  const handleLogin = useCallback((provider: 'google' | 'telegram') => {
+    if (provider === 'google') {
+      // Try real Google OAuth via NextAuth
+      setGoogleLoading(true)
+      signInWithGoogle().then((result) => {
+        setGoogleLoading(false)
+        if (result === 'oauth_redirect') {
+          // NextAuth is redirecting — don't do anything else
+          return
+        }
+        // Fallback: mock login
+        const role = login(provider)
+        if (role === 'admin') {
+          setAdminDialogOpen(true)
+        } else {
+          if (!registrationEnabled) {
+            navigate('dashboard')
+          } else {
+            setReferralDialogOpen(true)
+          }
+        }
+      }).catch(() => {
+        setGoogleLoading(false)
+        // Fallback: mock login
+        const role = login(provider)
+        if (role === 'admin') {
+          setAdminDialogOpen(true)
+        } else {
+          if (!registrationEnabled) {
+            navigate('dashboard')
+          } else {
+            setReferralDialogOpen(true)
+          }
+        }
+      })
     } else {
-      // When registration is paused, skip the referral dialog for existing users
-      // and navigate directly to the dashboard. Referral codes are for new users.
-      if (!registrationEnabled) {
-        navigate('dashboard')
+      // Telegram always uses mock
+      const role = login(provider)
+      if (role === 'admin') {
+        setAdminDialogOpen(true)
       } else {
-        // Show referral code dialog for regular users
-        setReferralDialogOpen(true)
+        if (!registrationEnabled) {
+          navigate('dashboard')
+        } else {
+          setReferralDialogOpen(true)
+        }
       }
     }
-  }
+  }, [login, registrationEnabled, navigate])
 
   const handleAdminAccess = () => {
     loginAsAdmin()
@@ -224,9 +261,14 @@ export function LoginPage() {
               size="lg"
               className="w-full bg-white hover:bg-gray-50 text-gray-800 border-gray-300 hover:border-gray-400 dark:bg-white dark:hover:bg-gray-100 dark:text-gray-800 dark:border-gray-300 h-12 text-base font-medium"
               onClick={() => handleLogin('google')}
+              disabled={googleLoading}
             >
-              <GoogleIcon />
-              Continue with Google
+              {googleLoading ? (
+                <Loader2 className="size-5 animate-spin" />
+              ) : (
+                <GoogleIcon />
+              )}
+              {googleLoading ? 'Connecting...' : 'Continue with Google'}
             </Button>
 
             {/* Telegram Auth */}

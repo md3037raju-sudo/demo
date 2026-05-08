@@ -344,7 +344,7 @@ export function AdminLayout() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-screen overflow-hidden pb-safe">
       {/* Desktop Sidebar */}
       {!isMobile && (
         <aside className="hidden md:flex w-64 shrink-0 border-r border-sidebar-border flex-col">

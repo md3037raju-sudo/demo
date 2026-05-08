@@ -1,7 +1,9 @@
 'use client'
 
+import { useEffect } from 'react'
 import { useNavigationStore } from '@/lib/navigation-store'
 import { useAuthStore } from '@/lib/auth-store'
+import { syncAllStores } from '@/lib/sync-all'
 import { LandingPage } from '@/components/pages/landing-page'
 import { LoginPage } from '@/components/pages/login-page'
 import { AboutPage } from '@/components/pages/about-page'
@@ -14,6 +16,11 @@ export default function Home() {
   const currentPage = useNavigationStore((s) => s.currentPage)
   const user = useAuthStore((s) => s.user)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+
+  // Sync all stores with Supabase on first load
+  useEffect(() => {
+    syncAllStores()
+  }, [])
 
   // Admin pages (role-guarded)
   if (currentPage.startsWith('admin')) {

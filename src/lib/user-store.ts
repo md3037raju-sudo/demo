@@ -231,10 +231,4 @@ export const useUserStore = create<UserState>((set, get) => ({
   getUserById: (id) => get().users.find((u) => u.id === id),
 }))
 
-// ── Auto-sync on store creation (setTimeout avoids SSR issues) ──
-
-if (typeof window !== 'undefined') {
-  setTimeout(() => {
-    useUserStore.getState().syncWithSupabase()
-  }, 0)
-}
+// NOTE: Auto-sync removed — call syncAllStores() from the app to trigger sync

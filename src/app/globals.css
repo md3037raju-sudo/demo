@@ -318,8 +318,40 @@
 /* ===== Animation System ===== */
 
 /* ── Touch action: prevent double-tap zoom on mobile ── */
-button, a, [role="button"], [data-slot="button"] {
+*, *::before, *::after {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button, a, [role="button"], [data-slot="button"], input, select, textarea {
   touch-action: manipulation;
+}
+
+/* ── Prevent iOS bounce/overscroll ── */
+html, body {
+  overscroll-behavior: none;
+}
+
+/* ── Fix 100vh on mobile (dynamic viewport height) ── */
+@supports (height: 100dvh) {
+  .h-screen {
+    height: 100dvh;
+  }
+}
+
+/* ── Minimum touch target size (44px) ── */
+button, [role="button"], a {
+  min-height: 44px;
+}
+
+button[data-size="icon"], button.size-8, button.size-9 {
+  min-height: unset;
+}
+
+/* ── iOS safe area support ── */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
 }
 
 /* ── When animations are OFF: only kill decorative transitions, NOT functional ones ── */
